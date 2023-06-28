@@ -5,6 +5,9 @@ import torch
 import torchvision
 import pytorch_lightning as pl
 
+import cv2
+cv2.setNumThreads(1)
+
 from packaging import version
 from omegaconf import OmegaConf
 from torch.utils.data import random_split, DataLoader, Dataset, Subset

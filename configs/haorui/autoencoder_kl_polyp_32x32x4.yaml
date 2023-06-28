@@ -1,13 +1,14 @@
 model:
   base_learning_rate: 4.5e-6
-  target: ldm.models.autoencoder.AutoencoderKL
+  target: ldm.haorui.autoencoder.AutoEncoderKL_Polyp
   params:
     monitor: "val/rec_loss"
     embed_dim: 4
+    ckpt_path: /ccvl/net/ccvl15/haorui/latent-diffusion-PC-ccvl23/pretrained_ckpts/autoencoder_kl_32x32x4_pretrained.ckpt
     lossconfig:
       target: ldm.modules.losses.LPIPSWithDiscriminator
       params:
-        disc_start: 50001
+        disc_start: 1
         kl_weight: 0.000001
         disc_weight: 0.5
 
@@ -26,18 +27,20 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 1
+    batch_size: 2
     wrap: True
     train:
-      target: ldm.data.imagenet.ImageNetSRTrain
+      target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
         size: 256
-        degradation: pil_nearest
+        image_path: /ccvl/net/ccvl15/haorui/datasets/CVC-ClinicDB/train_image_list.txt
+        mask_path: /ccvl/net/ccvl15/haorui/datasets/CVC-ClinicDB/train_mask_list.txt
     validation:
-      target: ldm.data.imagenet.ImageNetSRValidation
+      target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
         size: 256
-        degradation: pil_nearest
+        image_path: /ccvl/net/ccvl15/haorui/datasets/CVC-ClinicDB/val_image_list.txt
+        mask_path: /ccvl/net/ccvl15/haorui/datasets/CVC-ClinicDB/val_mask_list.txt
 
 lightning:
   callbacks:
