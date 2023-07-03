@@ -109,7 +109,7 @@ class DDPM(pl.LightningModule):
         self.loss_type = loss_type
 
         self.learn_logvar = learn_logvar
-        self.logvar = torch.full(fill_value=logvar_init, size=(self.num_timesteps,))
+        self.logvar = torch.full(fill_value=logvar_init, size=(self.num_timesteps,)).to(self.device)
         if self.learn_logvar:
             self.logvar = nn.Parameter(self.logvar, requires_grad=True)
 
@@ -694,6 +694,10 @@ class LatentDiffusion(DDPM):
             if self.use_positional_encodings:
                 pos_x, pos_y = self.compute_latent_shifts(batch)
                 c = {'pos_x': pos_x, 'pos_y': pos_y}
+        '''added by haorui. c concat with mask for image impainting'''
+        m = super().get_input(batch, 'mask').to(self.device)
+        m = torch.nn.functional.interpolate(m, size=c.shape[2:])
+        c = torch.cat([c, m], dim=1)
         out = [z, c]
         if return_first_stage_outputs:
             xrec = self.decode_first_stage(z)
@@ -1027,6 +1031,7 @@ class LatentDiffusion(DDPM):
         loss_simple = self.get_loss(model_output, target, mean=False).mean([1, 2, 3])
         loss_dict.update({f'{prefix}/loss_simple': loss_simple.mean()})
 
+        self.logvar = self.logvar.to(self.device)
         logvar_t = self.logvar[t].to(self.device)
         loss = loss_simple / torch.exp(logvar_t) + logvar_t
         # loss = loss_simple / torch.exp(self.logvar) + self.logvar
@@ -1265,7 +1270,10 @@ class LatentDiffusion(DDPM):
         log["inputs"] = x
         log["reconstruction"] = xrec
         if self.model.conditioning_key is not None:
-            if hasattr(self.cond_stage_model, "decode"):
+            '''changed order by Haorui for image impainting'''
+            if isimage(xc):
+                log["conditioning"] = xc
+            elif hasattr(self.cond_stage_model, "decode"):
                 xc = self.cond_stage_model.decode(c)
                 log["conditioning"] = xc
             elif self.cond_stage_key in ["caption"]:
@@ -1274,8 +1282,6 @@ class LatentDiffusion(DDPM):
             elif self.cond_stage_key == 'class_label':
                 xc = log_txt_as_img((x.shape[2], x.shape[3]), batch["human_label"])
                 log['conditioning'] = xc
-            elif isimage(xc):
-                log["conditioning"] = xc
             if ismap(xc):
                 log["original_conditioning"] = self.to_rgb(xc)
 

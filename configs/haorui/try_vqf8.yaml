@@ -1,0 +1,65 @@
+model:
+  base_learning_rate: 4.5e-06
+  target: ldm.models.autoencoder.VQModel
+  params:
+    embed_dim: 4
+    n_embed: 16384
+    monitor: val/rec_loss
+    ckpt_path: /mnt/ccvl15/haorui/latent-diffusion-PC-ccvl23/pretrained_ckpts/vq-f8.ckpt
+    ddconfig:
+      double_z: false
+      z_channels: 4
+      resolution: 256
+      in_channels: 3
+      out_ch: 3
+      ch: 128
+      ch_mult:
+      - 1
+      - 2
+      - 2
+      - 4
+      num_res_blocks: 2
+      attn_resolutions:
+      - 32
+      dropout: 0.0
+    lossconfig:
+      target: ldm.modules.losses.vqperceptual.VQLPIPSWithDiscriminator
+      params:
+        n_classes: 16384  # number of classes in the codebook? if this is 1000, there will be bug.
+        disc_conditional: false
+        disc_in_channels: 3
+        disc_num_layers: 2
+        disc_start: 1
+        disc_weight: 0.6
+        codebook_weight: 1.0
+
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 1
+    num_workers: 2
+    wrap: true
+    train:
+      target: ldm.data.imagenet.ImageNetSRTrain
+      params:
+        size: 256
+        degradation: pil_nearest
+    validation:
+      target: ldm.data.imagenet.ImageNetSRValidation
+      params:
+        size: 256
+        degradation: pil_nearest
+
+
+lightning:
+  callbacks:
+    image_logger:
+      target: main.ImageLogger
+      params:
+        batch_frequency: 1000
+        max_images: 8
+        increase_log_steps: True
+
+  trainer:
+    benchmark: True
+    accumulate_grad_batches: 2

@@ -4,7 +4,7 @@ model:
   params:
     monitor: "val/rec_loss"
     embed_dim: 4
-    ckpt_path: /ccvl/net/ccvl15/haorui/latent-diffusion-PC-ccvl23/pretrained_ckpts/autoencoder_kl_32x32x4_pretrained.ckpt
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/pretrained_ckpts/autoencoder_kl_32x32x4_pretrained.ckpt
     lossconfig:
       target: ldm.modules.losses.LPIPSWithDiscriminator
       params:
@@ -33,14 +33,16 @@ data:
       target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
         size: 256
-        image_path: /ccvl/net/ccvl15/haorui/datasets/CVC-ClinicDB/train_image_list.txt
-        mask_path: /ccvl/net/ccvl15/haorui/datasets/CVC-ClinicDB/train_mask_list.txt
+        root_path: /home/zongwei/haorui/ccvl15/haorui/datasets/CVC-ClinicDB/PNG
+        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/CVC-ClinicDB/train_image_list.txt
+        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/CVC-ClinicDB/train_mask_list.txt
     validation:
       target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
         size: 256
-        image_path: /ccvl/net/ccvl15/haorui/datasets/CVC-ClinicDB/val_image_list.txt
-        mask_path: /ccvl/net/ccvl15/haorui/datasets/CVC-ClinicDB/val_mask_list.txt
+        root_path: /home/zongwei/haorui/ccvl15/haorui/datasets/CVC-ClinicDB/PNG
+        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/CVC-ClinicDB/val_image_list.txt
+        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/CVC-ClinicDB/val_mask_list.txt
 
 lightning:
   callbacks:
