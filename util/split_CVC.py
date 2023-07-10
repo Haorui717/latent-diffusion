@@ -1,15 +1,15 @@
 import os
 
-image_path = "/mnt/ccvl15/haorui/datasets/CVC-ClinicDB/PNG/Original"
-mask_path = "/mnt/ccvl15/haorui/datasets/CVC-ClinicDB/PNG/Ground Truth"
+image_path = "/home/zongwei/haorui/ccvl15/haorui/datasets/Kvasir-SEG/images"
+mask_path = "/home/zongwei/haorui/ccvl15/haorui/datasets/Kvasir-SEG/masks"
 # randomly split a dataset into train and test
 image_list = []
 mask_list = []
 for filename in os.listdir(image_path):
-    image_list.append(os.path.join("Original", filename))
+    image_list.append(os.path.join("", filename))
 
 for filename in os.listdir(mask_path):
-    mask_list.append(os.path.join("Ground Truth", filename))
+    mask_list.append(os.path.join("", filename))
 
 image_list.sort()
 mask_list.sort()
