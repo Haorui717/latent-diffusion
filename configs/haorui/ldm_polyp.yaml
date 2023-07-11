@@ -16,7 +16,7 @@ model:
     cond_stage_trainable: false
     conditioning_key: concat  # to be checked
     monitor: val/loss_simple_ema  # what does this mean?
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-07-02T02-19-35_ldm_polyp/checkpoints/epoch=000262.ckpt
+#    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-07-02T02-19-35_ldm_polyp/checkpoints/epoch=000262.ckpt
     unet_config:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
       params:
@@ -48,7 +48,7 @@ model:
       params:
         embed_dim: 4
         n_embed: 16384
-        ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/pretrained_ckpts/vq-f8.ckpt
+        ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-Laptop/latent-diffusion/logs/2023-07-10T17-08-52_vqf8_polyp_32x32x4/checkpoints/epoch=000113.ckpt
         ddconfig:
           double_z: false
           z_channels: 4
@@ -72,8 +72,7 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 3
-    num_workers: 0
+    batch_size: 8
     wrap: True
     train:
       target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
