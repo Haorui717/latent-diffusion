@@ -12,10 +12,10 @@ from torch.utils.data import DataLoader
 from ldm.models.diffusion.ddim import DDIMSampler
 
 image_rescaler = albumentations.SmallestMaxSize(max_size=256, interpolation=cv2.INTER_AREA)
-def load_batch(root_path, image_list, mask_list, item):
+def load_batch(image_list, mask_list, item):
     # load image and mask
-    image_path = os.path.join(root_path, 'images',  image_list[item])
-    mask_path = os.path.join(root_path, 'masks', mask_list[item])
+    image_path = image_list[item]
+    mask_path = mask_list[item]
     image = Image.open(image_path).convert('RGB')
     mask = Image.open(mask_path).convert('L')
     image = np.array(image).astype(np.float32) / 255.0
@@ -59,7 +59,6 @@ if __name__ == '__main__':
     parser.add_argument('--base', type=str, nargs='?', help='config file path')
     parser.add_argument('--image_path', type=str, nargs='?', help='file containing lines of filenames of images')
     parser.add_argument('--mask_path', type=str, nargs='?', help='file containing lines of filenames of masks')
-    parser.add_argument('--root_path', type=str, nargs='?', help='path to root data dir')
     parser.add_argument('--outdir', type=str, nargs='?', help='dir to write results to')
     parser.add_argument('--steps', type=int, default=200, help='number of ddim sampling steps')
     opt = parser.parse_args()
@@ -87,7 +86,7 @@ if __name__ == '__main__':
     with torch.no_grad():
         with model.ema_scope():
             for item in tqdm(range(len(image_list))):
-                batch = load_batch(opt.root_path, image_list, mask_list, item)
+                batch = load_batch(image_list, mask_list, item)
                 mask = batch['mask']
                 masked_image = batch['masked_image']
 
