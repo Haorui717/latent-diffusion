@@ -1,4 +1,6 @@
 import argparse, os, sys, datetime, glob, importlib, csv
+from typing import Any
+
 import numpy as np
 import time
 import torch
@@ -253,7 +255,7 @@ class SetupCallback(Callback):
 
     def on_keyboard_interrupt(self, trainer, pl_module):
         if trainer.global_rank == 0:
-            print("Summoning checkpoint.")
+            print("Summoning checkpoint. --on_keyboard_interrupt")
             ckpt_path = os.path.join(self.ckptdir, "last.ckpt")
             trainer.save_checkpoint(ckpt_path)
 
@@ -345,7 +347,7 @@ class ImageLogger(Callback):
         if (self.check_frequency(check_idx) and  # batch_idx % self.batch_freq == 0
                 hasattr(pl_module, "log_images") and
                 callable(pl_module.log_images) and
-                self.max_images > 0):
+                self.max_images > 0) or split == 'val':
             logger = type(pl_module.logger)
 
             is_train = pl_module.training
@@ -399,11 +401,13 @@ class CUDACallback(Callback):
     # see https://github.com/SeanNaren/minGPT/blob/master/mingpt/callback.py
     def on_train_epoch_start(self, trainer, pl_module):
         # Reset the memory use counter
+        print("cuda callback on_train_epoch_start")
         torch.cuda.reset_peak_memory_stats(trainer.root_gpu)
         torch.cuda.synchronize(trainer.root_gpu)
         self.start_time = time.time()
 
     def on_train_epoch_end(self, trainer, pl_module, outputs=None):
+        print("cuda callback on_train_epoch_end")
         torch.cuda.synchronize(trainer.root_gpu)
         max_memory = torch.cuda.max_memory_allocated(trainer.root_gpu) / 2 ** 20
         epoch_time = time.time() - self.start_time
@@ -417,6 +421,11 @@ class CUDACallback(Callback):
         except AttributeError:
             pass
 
+class TestCallback(Callback):
+    def on_validation_batch_start(
+        self, trainer: "pl.Trainer", pl_module: "pl.LightningModule", batch: Any, batch_idx: int, dataloader_idx: int
+    ) -> None:
+        print("on_validation_batch_start")
 
 if __name__ == "__main__":
     # custom parser to specify config files, train, test and debug mode,
@@ -700,14 +709,14 @@ if __name__ == "__main__":
         def melk(*args, **kwargs):
             # run all checkpoint hooks
             if trainer.global_rank == 0:
-                print("Summoning checkpoint.")
+                print("Summoning checkpoint. --melk")
                 ckpt_path = os.path.join(ckptdir, "last.ckpt")
                 trainer.save_checkpoint(ckpt_path)
 
 
         def divein(*args, **kwargs):
             if trainer.global_rank == 0:
-                import pudb;
+                import pudb
                 pudb.set_trace()
 
 
