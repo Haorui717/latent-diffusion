@@ -1,3 +1,8 @@
+'''
+Original version of generating polyp images. Given a list of images and masks,
+it generates polyps on the masks with a trained diffusion model.
+'''
+
 import argparse, os, sys, glob
 
 import albumentations

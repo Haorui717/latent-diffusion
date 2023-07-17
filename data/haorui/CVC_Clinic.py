@@ -33,8 +33,6 @@ class CVC_Clinic_Reconstruction(Dataset):
         return len(self.image_list)
 
     def __getitem__(self, item):
-        if '/home/zongwei/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C3/masks_C3/C3_EndoCV2021_0048_mask.jpg' == self.mask_list[item]:
-            print(self.mask_list[item])
         # load image and mask with suffix jpg or png
         image = Image.open(self.image_list[item]).convert('RGB')
         mask = Image.open(self.mask_list[item]).convert('L')
