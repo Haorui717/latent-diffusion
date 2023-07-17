@@ -1,0 +1,24 @@
+{
+    "training": [
+        {
+            "fold": 0,
+            "image": [
+                "TrainingData/BraTS2021_00495/BraTS2021_00495_flair.nii.gz",
+                "TrainingData/BraTS2021_00495/BraTS2021_00495_t1ce.nii.gz",
+                "TrainingData/BraTS2021_00495/BraTS2021_00495_t1.nii.gz",
+                "TrainingData/BraTS2021_00495/BraTS2021_00495_t2.nii.gz"
+            ],
+            "label": "TrainingData/BraTS2021_00495/BraTS2021_00495_seg.nii.gz"
+        },
+        {
+            "fold": 1,
+            "image": [
+                "TrainingData/BraTS2021_00621/BraTS2021_00621_flair.nii.gz",
+                "TrainingData/BraTS2021_00621/BraTS2021_00621_t1ce.nii.gz",
+                "TrainingData/BraTS2021_00621/BraTS2021_00621_t1.nii.gz",
+                "TrainingData/BraTS2021_00621/BraTS2021_00621_t2.nii.gz"
+            ],
+            "label": "TrainingData/BraTS2021_00621/BraTS2021_00621_seg.nii.gz"
+        }
+    ]
+}
