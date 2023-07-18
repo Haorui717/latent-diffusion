@@ -52,7 +52,7 @@ def gen_mask(shape, start_x=None, start_y=None):
     mask = cv2.dilate(mask, kernel, iterations=1)
     return mask
 
-def reshape_mask(mask, shape):
+def reshape_mask(mask, shape, random_crop=False):
     # mask's shape should be the same as shape
     # randomly pad the mask if it is smaller than shape
     # if mask.shape[0] < shape[0]:
@@ -67,19 +67,20 @@ def reshape_mask(mask, shape):
 
     # if mask's shape is smaller than shape, then rescale it to shape with nearest interpolation
     if mask.shape[0] < shape[0]:
-        mask = cv2.resize(mask, (shape[0], int(shape[0] * mask.shape[1] / mask.shape[0])), interpolation=cv2.INTER_NEAREST)
+        mask = cv2.resize(mask, (int(shape[0] * mask.shape[1] / mask.shape[0]), shape[0]), interpolation=cv2.INTER_NEAREST)
 
     if mask.shape[1] < shape[1]:
-        mask = cv2.resize(mask, (int(shape[1] * mask.shape[0] / mask.shape[1]), shape[1]), interpolation=cv2.INTER_NEAREST)
+        mask = cv2.resize(mask, (shape[1], int(shape[1] * mask.shape[0] / mask.shape[1])), interpolation=cv2.INTER_NEAREST)
 
     # randomly crop the mask if it is larger than shape
     if mask.shape[0] > shape[0]:
-        start_x = np.random.randint(0, mask.shape[0] - shape[0])
+        start_x = np.random.randint(0, mask.shape[0] - shape[0]) if \
+            random_crop else (mask.shape[0] - shape[0]) // 2
         mask = mask[start_x:start_x+shape[0], :]
     if mask.shape[1] > shape[1]:
-        start_y = np.random.randint(0, mask.shape[1] - shape[1])
+        start_y = np.random.randint(0, mask.shape[1] - shape[1]) if \
+            random_crop else (mask.shape[1] - shape[1]) // 2
         mask = mask[:, start_y:start_y+shape[1]]
-
 
     return mask
 
@@ -111,10 +112,12 @@ def load_batch(image_list, mask_list, item, shufle=True):
     image = np.array(image).astype(np.float32) / 255.0
     mask = np.array(mask).astype(np.float32) / 255.0
 
-    # crop image and mask from right top corner to make them square
+    # crop image and mask to make them square
     min_side_len = min(image.shape[:2])
     crop_side_len = min_side_len
-    image = image[-crop_side_len:, -crop_side_len:]
+    # image = image[-crop_side_len:, -crop_side_len:] # crop from right top corner
+    # crop from the middle
+    image = image[(image.shape[0] - crop_side_len) // 2:(image.shape[0] + crop_side_len) // 2, (image.shape[1] - crop_side_len) // 2:(image.shape[1] + crop_side_len) // 2]
     if shufle:
         # random mask, so reshape the mask to the same shape as image
         mask = reshape_mask(mask, image.shape[:2])
@@ -216,5 +219,13 @@ if __name__ == '__main__':
             # combine image, masked_image, predicted_image horizontally
             combined = np.concatenate([image, masked_image, predicted_image], axis=1)
             # save combined image
-            Image.fromarray(combined.astype(np.uint8)).save(
-                os.path.join(opt.outdir, os.path.basename(batch['image_path'])))
+            # if file exists, rename it with a suffix _1, _2, ...
+            if os.path.exists(os.path.join(opt.outdir, os.path.basename(batch['image_path']))):
+                suffix = 1
+                while os.path.exists(os.path.join(opt.outdir, os.path.splitext(os.path.basename(batch['image_path']))[0] + '_' + str(suffix) + '.jpg')):
+                    suffix += 1
+                Image.fromarray(combined.astype(np.uint8)).save(
+                    os.path.join(opt.outdir, os.path.splitext(os.path.basename(batch['image_path']))[0] + '_' + str(suffix) + '.jpg'))
+            else:
+                Image.fromarray(combined.astype(np.uint8)).save(
+                    os.path.join(opt.outdir, os.path.basename(batch['image_path'])))

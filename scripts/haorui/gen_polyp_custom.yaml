@@ -15,7 +15,7 @@ model:
     cond_stage_trainable: false
     conditioning_key: concat  # to be checked
     monitor: val/loss_simple_ema  # what does this mean?
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-Laptop/latent-diffusion/logs/2023-07-11T14-23-22_ldm_polyp/checkpoints/epoch=000295.ckpt
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/__2023-07-02T02-19-35_ldm_polyp/checkpoints/epoch=000465.ckpt
     unet_config:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
       params:
