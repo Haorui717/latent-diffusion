@@ -310,6 +310,7 @@ class ImageLogger(Callback):
         self.log_on_batch_idx = log_on_batch_idx
         self.log_images_kwargs = log_images_kwargs if log_images_kwargs else {}
         self.log_first_step = log_first_step
+        self.last_val_log_step = -1
 
     @rank_zero_only
     def _testtube(self, pl_module, images, batch_idx, split):
@@ -390,8 +391,9 @@ class ImageLogger(Callback):
             self.log_img(pl_module, batch, batch_idx, split="train")
 
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-        if not self.disabled and pl_module.global_step > 0:
+        if not self.disabled and pl_module.global_step - self.last_val_log_step >= self.batch_freq:  # log at least every batch_freq steps
             self.log_img(pl_module, batch, batch_idx, split="val")
+            self.last_val_log_step = pl_module.global_step
         if hasattr(pl_module, 'calibrate_grad_norm'):
             if (pl_module.calibrate_grad_norm and batch_idx % 25 == 0) and batch_idx > 0:
                 self.log_gradients(trainer, pl_module, batch_idx=batch_idx)

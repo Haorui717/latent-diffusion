@@ -44,15 +44,15 @@ data:
       params:
         size: 256
 #        transpose: true
-        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/PolyGEN_p+n_train_images.txt
-        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/PolyGEN_p+n_train_images.txt
+        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/PolyGEN_FMC_CVC_images.txt
+        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/PolyGEN_FMC_CVC_images.txt
     validation:
       target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
         size: 256
 #        transpose: true
-        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/PolyGEN_p+n_val_images.txt
-        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/PolyGEN_p+n_val_images.txt
+        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/PolyGEN_FMC_CVC_images.txt
+        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/PolyGEN_FMC_CVC_images.txt
 
 
 

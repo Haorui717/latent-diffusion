@@ -52,7 +52,7 @@ def gen_mask(shape, start_x=None, start_y=None):
     mask = cv2.dilate(mask, kernel, iterations=1)
     return mask
 
-def reshape_mask(mask, shape, random_crop=False):
+def reshape_mask(mask, shape, random_resize=False, random_crop=False):
     # mask's shape should be the same as shape
     # randomly pad the mask if it is smaller than shape
     # if mask.shape[0] < shape[0]:
@@ -72,7 +72,11 @@ def reshape_mask(mask, shape, random_crop=False):
     if mask.shape[1] < shape[1]:
         mask = cv2.resize(mask, (shape[1], int(shape[1] * mask.shape[0] / mask.shape[1])), interpolation=cv2.INTER_NEAREST)
 
-    # randomly crop the mask if it is larger than shape
+    if random_resize:  # randomly resize the mask to bigger shape [1 ~ 2] times
+        scale = np.random.rand() + 1
+        mask = cv2.resize(mask, (int(mask.shape[1] * scale), int(mask.shape[0] * scale)), interpolation=cv2.INTER_NEAREST)
+
+    # crop the mask if it is larger than shape
     if mask.shape[0] > shape[0]:
         start_x = np.random.randint(0, mask.shape[0] - shape[0]) if \
             random_crop else (mask.shape[0] - shape[0]) // 2
@@ -96,12 +100,12 @@ def reshape_mask(mask, shape, random_crop=False):
 
 #%%
 
-def load_batch(image_list, mask_list, item, shufle=True):
+def load_batch(image_list, mask_list, item, mask_shuffle=True, random_resize=False, random_crop=False, random_crop_image=False):
     # load image and mask
     image_path = image_list[item]
     image = Image.open(image_path).convert('RGB')
     try:
-        if shufle:
+        if mask_shuffle:
             mask_path = mask_list[np.random.randint(0, len(mask_list))]
         else:
             mask_path = mask_list[item]
@@ -113,17 +117,19 @@ def load_batch(image_list, mask_list, item, shufle=True):
     mask = np.array(mask).astype(np.float32) / 255.0
 
     # crop image and mask to make them square
-    min_side_len = min(image.shape[:2])
-    crop_side_len = min_side_len
-    # image = image[-crop_side_len:, -crop_side_len:] # crop from right top corner
-    # crop from the middle
-    image = image[(image.shape[0] - crop_side_len) // 2:(image.shape[0] + crop_side_len) // 2, (image.shape[1] - crop_side_len) // 2:(image.shape[1] + crop_side_len) // 2]
-    if shufle:
-        # random mask, so reshape the mask to the same shape as image
-        mask = reshape_mask(mask, image.shape[:2])
-    else:
-        # mask corresponds to the image, crop it from right top corner
-        mask = mask[-crop_side_len:, -crop_side_len:]
+    if random_crop_image:
+        min_side_len = min(image.shape[:2])
+        crop_side_len = min_side_len * np.random.uniform(0.5, 1.0, size=None)
+        crop_side_len = int(crop_side_len)
+        start_x = np.random.randint(0, image.shape[0] - crop_side_len)
+        start_y = np.random.randint(0, image.shape[1] - crop_side_len)
+        image = image[start_x:start_x+crop_side_len, start_y:start_y+crop_side_len]
+    else:# crop from the middle
+        min_side_len = min(image.shape[:2])
+        crop_side_len = min_side_len
+        image = image[(image.shape[0] - crop_side_len) // 2:(image.shape[0] + crop_side_len) // 2, (image.shape[1] - crop_side_len) // 2:(image.shape[1] + crop_side_len) // 2]
+
+    mask = reshape_mask(mask, image.shape[:2], random_resize=random_resize, random_crop=random_crop)
 
     # resize image and mask
     image = image_rescaler(image=image)['image']
@@ -155,16 +161,23 @@ if __name__ == '__main__':
     parser.add_argument('--base', type=str, default='configs/polyp.yaml')
     parser.add_argument('--image_path', type=str, help='file containing lines of filenames of images')
     parser.add_argument('--mask_path', type=str, help='file containing lines of filenames of masks', required=False)
-    parser.add_argument('--mask_shuffle', action='store_true', help='shuffle the mask list')
+    parser.add_argument('--mask_shuffle', action='store_true', help='shuffle the mask list', default=False)
     parser.add_argument('--outdir', type=str, help='output directory', required=True)
     parser.add_argument('--steps', type=int, help='denoise steps', default=200)
 
+    parser.add_argument('--model', type=str, help='model name', required=True)
+    parser.add_argument('--random_resize_mask', action='store_true', help='randomly resize the mask', default=False)
+    parser.add_argument('--random_crop_mask', action='store_true', help='random crop the mask, otherwise crop from middle', default=False)
+    parser.add_argument('--random_crop_image', action='store_true', help='randomly crop image, otherwise crop from middle', default=False)
+    parser.add_argument('--debug', action='store_true', help='debug mode, do not log', default=False)
+
     opt = parser.parse_args()
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-    opt.outdir = os.path.join(opt.outdir, now)
-    os.makedirs(opt.outdir, exist_ok=True)
-    # copy config file to output directory
-    shutil.copy(opt.base, os.path.join(opt.outdir, 'config.yaml'))
+    if not opt.debug:
+        opt.outdir = os.path.join(opt.outdir, now)
+        os.makedirs(opt.outdir, exist_ok=True)
+        # copy config file to output directory
+        shutil.copy(opt.base, os.path.join(opt.outdir, 'config.yaml'))
 
     image_list = []
     with open(opt.image_path, 'r') as f:
@@ -180,15 +193,15 @@ if __name__ == '__main__':
     mask_list.sort()
 
     config = OmegaConf.load(opt.base)
-    model = instantiate_from_config(config.model)
+    model = instantiate_from_config(getattr(config, opt.model))
     model = model.cuda()
     model.eval()
 
-    sampler = DDIMSampler(model, 200)
+    sampler = DDIMSampler(model, opt.steps)
 
     with torch.no_grad():
         for item in tqdm(range(len(image_list))):
-            batch = load_batch(image_list, mask_list, item, opt.mask_shuffle)
+            batch = load_batch(image_list, mask_list, item, opt.mask_shuffle, opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
             mask = batch['mask']
             masked_image = batch['masked_image']
 

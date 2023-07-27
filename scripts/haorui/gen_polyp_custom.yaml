@@ -1,4 +1,4 @@
-model:
+ldm:
   base_learning_rate: 1.0e-06
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
@@ -15,7 +15,7 @@ model:
     cond_stage_trainable: false
     conditioning_key: concat  # to be checked
     monitor: val/loss_simple_ema  # what does this mean?
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/__2023-07-02T02-19-35_ldm_polyp/checkpoints/epoch=000465.ckpt
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-Laptop/latent-diffusion/logs/2023-07-11T14-23-22_ldm_polyp/checkpoints/epoch=000295.ckpt
     unet_config:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
       params:
@@ -66,4 +66,48 @@ model:
           dropout: 0.0
         lossconfig:
           target: torch.nn.Identity
+    cond_stage_config: __is_first_stage__  # to be checked
+
+ddpm:
+  target: ldm.models.diffusion.ddpm.LatentDiffusion
+  params:
+    linear_start: 0.0015
+    linear_end: 0.0205
+    num_timesteps_cond: 1  # all other configs have this set to 1, why
+    log_every_t: 200
+    timesteps: 1000
+    loss_type: l1
+    first_stage_key: image
+    cond_stage_key: masked_image
+    image_size: 256
+    channels: 3
+    concat_mode: true
+    cond_stage_trainable: false
+    conditioning_key: concat  # to be checked
+    monitor: val/loss_simple_ema  # what does this mean?
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-07-23T11-31-51_ddpm_polyp_debug/checkpoints/epoch=000621.ckpt
+    unet_config:
+      target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+      params:
+        image_size: 256
+        in_channels: 7
+        out_channels: 3
+        model_channels: 128  # what does this mean?
+        attention_resolutions:
+          - 8
+          - 4
+        num_res_blocks: 2
+        channel_mult:
+          - 1
+          - 2
+          - 4
+          - 8
+        num_heads: 8
+        resblock_updown: true
+    #        num_head_channels: 32
+    #        use_spatial_transformer: true
+    #        transformer_depth: 1
+    #        context_dim: 512
+    first_stage_config:
+      target: ldm.models.autoencoder.IdentityFirstStage
     cond_stage_config: __is_first_stage__  # to be checked
