@@ -1,11 +1,10 @@
-model:
+ldm: &ldm_model
   base_learning_rate: 1.0e-06
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
     linear_start: 0.0015
     linear_end: 0.0205
     num_timesteps_cond: 1  # all other configs have this set to 1, why
-    log_every_t: 200
     timesteps: 1000
     loss_type: l1
     first_stage_key: image
@@ -69,33 +68,22 @@ model:
           target: torch.nn.Identity
     cond_stage_config: __is_first_stage__  # to be checked
 
-data:
-  target: main.DataModuleFromConfig
-  params:
-    batch_size: 8
-    wrap: True
-    train:
-      target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
-      params:
-        size: 256
-        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_images_100.txt
-        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_masks_100.txt
-    validation:
-      target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
-      params:
-        size: 256
-        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_val_images.txt
-        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_val_masks.txt
-
-
-lightning:
-  callbacks:
-    image_logger:
-      target: main.ImageLogger
-      params:
-        batch_frequency: 1000
-        max_images: 8
-        increase_log_steps: False
-
-  trainer:
-    benchmark: True
+models:
+  - model: *ldm_model
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-07-27T23-47-41_ldm_polyp/2023-07-27T23-48-21_ldm_polyp_100/checkpoints/epoch=000267.ckpt
+  - model: *ldm_model
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-07-27T23-47-41_ldm_polyp/2023-07-27T23-48-16_ldm_polyp_200/checkpoints/epoch=000197.ckpt
+  - model: *ldm_model
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-07-27T23-47-41_ldm_polyp/2023-07-27T23-48-11_ldm_polyp_300/checkpoints/epoch=000267.ckpt
+  - model: *ldm_model
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-07-27T23-47-41_ldm_polyp/2023-07-27T23-48-06_ldm_polyp_400/checkpoints/epoch=000164.ckpt
+  - model: *ldm_model
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-07-27T23-47-41_ldm_polyp/2023-07-27T23-48-01_ldm_polyp_500/checkpoints/epoch=000226.ckpt
+  - model: *ldm_model
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-07-27T23-47-41_ldm_polyp/2023-07-27T23-47-56_ldm_polyp_600/checkpoints/epoch=000164.ckpt
+  - model: *ldm_model
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-07-27T23-47-41_ldm_polyp/2023-07-27T23-47-51_ldm_polyp_700/checkpoints/epoch=000170.ckpt
+  - model: *ldm_model
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-07-27T23-47-41_ldm_polyp/2023-07-27T23-47-45_ldm_polyp_800/checkpoints/epoch=000285.ckpt
+  - model: *ldm_model
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-07-27T23-47-41_ldm_polyp/2023-07-27T23-47-41_ldm_polyp_900/checkpoints/epoch=000267.ckpt

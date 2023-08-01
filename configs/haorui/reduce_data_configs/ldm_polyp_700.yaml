@@ -78,8 +78,8 @@ data:
       target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
         size: 256
-        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_images_100.txt
-        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_masks_100.txt
+        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_images_700.txt
+        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_masks_700.txt
     validation:
       target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
