@@ -1,0 +1,101 @@
+model:
+  base_learning_rate: 1.0e-06
+  target: ldm.models.diffusion.ddpm.LatentDiffusion
+  params:
+    linear_start: 0.0015
+    linear_end: 0.0205
+    num_timesteps_cond: 1  # all other configs have this set to 1, why
+    log_every_t: 200
+    timesteps: 1000
+    loss_type: l1
+    first_stage_key: image
+    cond_stage_key: masked_image
+    image_size: 32
+    channels: 4
+    concat_mode: true
+    cond_stage_trainable: false
+    conditioning_key: concat  # to be checked
+    monitor: val/loss_simple_ema  # what does this mean?
+#    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-07-02T02-19-35_ldm_polyp/checkpoints/epoch=000262.ckpt
+    unet_config:
+      target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+      params:
+        image_size: 32
+        in_channels: 9
+        out_channels: 4
+        model_channels: 128
+        attention_resolutions:
+        #note: this isn\t actually the resolution but
+        # the downsampling factor, i.e. this corresnponds to
+        # attention on spatial resolution 8,16,32, as the
+        # spatial reolution of the latents is 32 for f8
+        - 4
+        - 2
+        - 1
+        num_res_blocks: 2
+        channel_mult:
+        - 1
+        - 2
+        - 4
+        num_heads: 8
+        resblock_updown: true
+#        num_head_channels: 32
+#        use_spatial_transformer: true
+#        transformer_depth: 1
+#        context_dim: 512
+    first_stage_config:
+      target: ldm.models.autoencoder.VQModelInterface
+      params:
+        embed_dim: 4
+        n_embed: 16384
+        ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/__2023-07-25T18-20-02_vqf8_polyp_32x32x4/checkpoints/epoch=000204.ckpt
+        ddconfig:
+          double_z: false
+          z_channels: 4
+          resolution: 256
+          in_channels: 3
+          out_ch: 3
+          ch: 128
+          ch_mult:
+          - 1
+          - 2
+          - 2
+          - 4
+          num_res_blocks: 2
+          attn_resolutions:
+          - 32
+          dropout: 0.0
+        lossconfig:
+          target: torch.nn.Identity
+    cond_stage_config: __is_first_stage__  # to be checked
+
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 8
+    wrap: True
+    train:
+      target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
+      params:
+        size: 256
+        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_images_20.txt
+        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_masks_20.txt
+    validation:
+      target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
+      params:
+        size: 256
+        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_val_images.txt
+        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_val_masks.txt
+
+
+lightning:
+  callbacks:
+    image_logger:
+      target: main.ImageLogger
+      params:
+        batch_frequency: 1000
+        max_images: 8
+        increase_log_steps: False
+
+  trainer:
+    benchmark: True
