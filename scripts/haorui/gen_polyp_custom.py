@@ -89,7 +89,16 @@ def reshape_mask(mask, shape, random_resize=False, random_crop=False):
     return mask
 
 
-
+def check_polyp_size(mask, min_size=0.02, max_size=0.3):
+    # check the size of the polyp in the mask, if it is too small or too large, then regenerate the mask
+    # the polyp should occupy at least 1% of the mask and at most 50% of the mask
+    mask = np.array(mask).astype(np.float32) / 255.0
+    h, w = mask.shape
+    polyp_area = np.sum(mask > 0.5)
+    if polyp_area < h * w * min_size or polyp_area > h * w * max_size:
+        return False
+    else:
+        return True
 
 #%%
 # randomly generate masks and show the masks.
@@ -106,12 +115,17 @@ def load_batch(image_list, mask_list, item, mask_shuffle=True, random_resize=Fal
     image = Image.open(image_path).convert('RGB')
     try:
         if mask_shuffle:
-            mask_path = mask_list[np.random.randint(0, len(mask_list))]
+            while True:
+                mask_path = mask_list[np.random.randint(0, len(mask_list))]
+                mask = Image.open(mask_path).convert('L')
+                if check_polyp_size(mask):
+                    break
         else:
             mask_path = mask_list[item]
-        mask = Image.open(mask_path).convert('L')
+            mask = Image.open(mask_path).convert('L')
     except:
         # mask_list is empty, generate a random mask of the same size as image
+        print('mask_list is empty, generate a random mask of the same size as image')
         mask = Image.fromarray(gen_mask(image.size))
     image = np.array(image).astype(np.float32) / 255.0
     mask = np.array(mask).astype(np.float32) / 255.0
@@ -124,11 +138,16 @@ def load_batch(image_list, mask_list, item, mask_shuffle=True, random_resize=Fal
         start_x = np.random.randint(0, image.shape[0] - crop_side_len)
         start_y = np.random.randint(0, image.shape[1] - crop_side_len)
         image = image[start_x:start_x+crop_side_len, start_y:start_y+crop_side_len]
-    else:# crop from the middle
+    else:# crop the image at 2/3 of the longer side
         min_side_len = min(image.shape[:2])
         crop_side_len = min_side_len
-        image = image[(image.shape[0] - crop_side_len) // 2:(image.shape[0] + crop_side_len) // 2, (image.shape[1] - crop_side_len) // 2:(image.shape[1] + crop_side_len) // 2]
-
+        if image.shape[0] > image.shape[1]:
+            start_x = min(image.shape[0] // 3 * 2 - crop_side_len // 2, image.shape[0] - crop_side_len)
+            start_y = 0
+        else:
+            start_x = 0
+            start_y = min(image.shape[1] // 3 * 2 - crop_side_len // 2, image.shape[1] - crop_side_len)
+        image = image[start_x:start_x+crop_side_len, start_y:start_y+crop_side_len]
     mask = reshape_mask(mask, image.shape[:2], random_resize=random_resize, random_crop=random_crop)
 
     # resize image and mask
@@ -151,7 +170,7 @@ def load_batch(image_list, mask_list, item, mask_shuffle=True, random_resize=Fal
         batch[k] = torch.from_numpy(batch[k]).float().cuda()
         batch[k] = batch[k].unsqueeze(0)
     batch['image_path'] = image_list[item]
-    batch['mask_path'] = mask_list[item]
+    # batch['mask_path'] = mask_list[item]
 
     return batch
 
