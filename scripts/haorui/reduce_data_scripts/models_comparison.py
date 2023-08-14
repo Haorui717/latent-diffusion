@@ -1,7 +1,10 @@
 import argparse, os, sys, glob
+import concurrent
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 import datetime
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 
 import albumentations
 import cv2
@@ -80,10 +83,20 @@ def image_quality_compare(models, samplers, image_list, mask_list, opt):
             save_image_with_suffix(combined, os.path.join(opt.outdir, 'combined'), os.path.basename(batch['image_path'][i]))
 
 
+
 @torch.no_grad()
 def gen_samples(models, samplers, image_list, mask_list, opt, nums=None, random_image=False):
-    assert not random_image or nums is not None, "do not use random_image without specifying nums"
-    nums = len(image_list) if nums is None else min(nums, len(image_list))
+    assert not (random_image and nums is None), "do not use random_image without specifying nums"
+    if not random_image:
+        nums = len(image_list) if nums is None else min(nums, len(image_list))
+
+    def load_single_batch(index, image_list, mask_list, random_image, opt):
+        if random_image:
+            return load_batch(image_list, mask_list, np.random.randint(len(image_list)), opt.mask_shuffle,
+                              opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
+        else:
+            return load_batch(image_list, mask_list, min(index, len(image_list) - 1), opt.mask_shuffle,
+                              opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
 
     # make directories for each model
     os.makedirs(os.path.join(opt.outdir, 'input'), exist_ok=True)
@@ -93,62 +106,63 @@ def gen_samples(models, samplers, image_list, mask_list, opt, nums=None, random_
     for i in range(len(models)):
         os.makedirs(os.path.join(opt.outdir, str(i)), exist_ok=True)
 
-    for item in tqdm(range(0, nums, opt.batch_size)):
-        batches = []
-        for i in range(opt.batch_size):
-            if random_image:
-                tmp = load_batch(image_list, mask_list, np.random.randint(len(image_list)), opt.mask_shuffle, opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
-            else:
-                tmp = load_batch(image_list, mask_list, min(item+i, len(image_list)-1), opt.mask_shuffle, opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
-            batches.append(tmp)
-        batch = dict()
-        for key in batches[0].keys():
-            batch[key] = torch.cat([b[key] for b in batches], dim=0) if isinstance(batches[0][key], torch.Tensor) \
-                else [b[key] for b in batches]
+    with ThreadPoolExecutor(max_workers=16) as executor, ThreadPoolExecutor(max_workers=16) as save_executor:
+        for item in tqdm(range(0, nums, opt.batch_size)):
+            future_to_index = {executor.submit(load_single_batch, item + i, image_list, mask_list, random_image, opt): i
+                               for i in range(opt.batch_size)}
+            batches = []
+            for future in concurrent.futures.as_completed(future_to_index):
+                batches.append(future.result())
+            batch = dict()
+            for key in batches[0].keys():
+                batch[key] = torch.cat([b[key] for b in batches], dim=0) if isinstance(batches[0][key], torch.Tensor) \
+                    else [b[key] for b in batches]
 
-        input_image = batch['image']  # (B, 3, H, W)
-        mask = batch['mask']  # (B, 1, H, W)
-        masked_image = batch['masked_image']  # (B, 3, H, W)
+            input_image = batch['image']  # (B, 3, H, W)
+            mask = batch['mask']  # (B, 1, H, W)
+            masked_image = batch['masked_image']  # (B, 3, H, W)
 
-        condition = models[0].cond_stage_model.encode(masked_image)
-        m_condition = torch.nn.functional.interpolate(mask, size=condition.shape[-2:])
-        c = torch.cat([condition, m_condition], dim=1)
-        shape = (c.shape[1] - 1,) + c.shape[2:]
+            condition = models[0].cond_stage_model.encode(masked_image)
+            m_condition = torch.nn.functional.interpolate(mask, size=condition.shape[-2:])
+            c = torch.cat([condition, m_condition], dim=1)
+            shape = (c.shape[1] - 1,) + c.shape[2:]
 
-        input_image  = torch.clamp((input_image + 1.) / 2., 0., 1.).cpu().numpy().transpose(0, 2, 3, 1) * 255.0
-        input_image  = input_image.astype(np.uint8)
-        masked_image = torch.clamp((masked_image + 1.) / 2., 0., 1.).cpu().numpy().transpose(0, 2, 3, 1) * 255.0
-        masked_image = masked_image.astype(np.uint8)
-        mask         = torch.clamp((mask + 1.) / 2., 0., 1.).cpu().numpy().transpose(0, 2, 3, 1) * 255.0
-        mask         = np.repeat(mask, 3, axis=3)
-        mask         = mask.astype(np.uint8)
+            input_image  = torch.clamp((input_image + 1.) / 2., 0., 1.).cpu().numpy().transpose(0, 2, 3, 1) * 255.0
+            input_image  = input_image.astype(np.uint8)
+            masked_image = torch.clamp((masked_image + 1.) / 2., 0., 1.).cpu().numpy().transpose(0, 2, 3, 1) * 255.0
+            masked_image = masked_image.astype(np.uint8)
+            mask         = torch.clamp((mask + 1.) / 2., 0., 1.).cpu().numpy().transpose(0, 2, 3, 1) * 255.0
+            mask         = np.repeat(mask, 3, axis=3)
+            mask         = mask.astype(np.uint8)
 
-        l = [input_image, masked_image]
-        for i in range(len(models)):
-            model = models[i]
-            sampler = samplers[i]
-            samples_ddim, _ = sampler.sample(S=opt.steps,
-                                             conditioning=c,
-                                             batch_size=c.shape[0],
-                                             shape=shape,
-                                             verbose=False)
-            x_sample_ddim = model.decode_first_stage(samples_ddim)
-            predicted_image = torch.clamp((x_sample_ddim + 1.) / 2., 0., 1.).cpu().numpy().transpose(0, 2, 3, 1) * 255.0
-            predicted_image = predicted_image.astype(np.uint8)
-            l.append(predicted_image)
-
-        # save images
-        for i in range(len(input_image)):  # for each result in the batch
-            combined = np.concatenate([img[i] for img in l], axis=1).astype(np.uint8)
+            l = [input_image, masked_image]
+            for i in range(len(models)):
+                model = models[i]
+                sampler = samplers[i]
+                samples_ddim, _ = sampler.sample(S=opt.steps,
+                                                 conditioning=c,
+                                                 batch_size=c.shape[0],
+                                                 shape=shape,
+                                                 verbose=False)
+                x_sample_ddim = model.decode_first_stage(samples_ddim)
+                predicted_image = torch.clamp((x_sample_ddim + 1.) / 2., 0., 1.).cpu().numpy().transpose(0, 2, 3, 1) * 255.0
+                predicted_image = predicted_image.astype(np.uint8)
+                l.append(predicted_image)
 
             # save images
-            save_image_with_suffix(input_image[i], os.path.join(opt.outdir, 'input'), os.path.basename(batch['image_path'][i]))
-            save_image_with_suffix(masked_image[i], os.path.join(opt.outdir, 'masked_image'), os.path.basename(batch['image_path'][i]))
-            save_image_with_suffix(combined, os.path.join(opt.outdir, 'combined'), os.path.basename(batch['image_path'][i]))
-            save_image_with_suffix(mask[i], os.path.join(opt.outdir, 'mask'), os.path.basename(batch['image_path'][i]))
-            for j in range(len(models)):
-                save_image_with_suffix(l[j+2][i], os.path.join(opt.outdir, str(j)), os.path.basename(batch['image_path'][i]))
+            futures = []
+            for i in range(len(input_image)):  # for each result in the batch
+                combined = np.concatenate([img[i] for img in l], axis=1).astype(np.uint8)
 
+                # save images
+                futures.append(save_executor.submit(save_image_with_suffix, input_image[i], os.path.join(opt.outdir, 'input'), os.path.basename(batch['image_path'][i])))
+                futures.append(save_executor.submit(save_image_with_suffix, masked_image[i], os.path.join(opt.outdir, 'masked_image'), os.path.basename(batch['image_path'][i])))
+                futures.append(save_executor.submit(save_image_with_suffix, combined, os.path.join(opt.outdir, 'combined'), os.path.basename(batch['image_path'][i])))
+                futures.append(save_executor.submit(save_image_with_suffix, mask[i], os.path.join(opt.outdir, 'mask'), os.path.basename(batch['image_path'][i])))
+                for j in range(len(models)):
+                    futures.append(save_executor.submit(save_image_with_suffix, l[j+2][i], os.path.join(opt.outdir, str(j)), os.path.basename(batch['image_path'][i])))
+            for future in concurrent.futures.as_completed(futures):
+                future.result()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -160,6 +174,7 @@ if __name__ == '__main__':
     parser.add_argument('--outdir', type=str, help='output directory', required=True)
     parser.add_argument('--steps', type=int, help='denoise steps', default=200)
     parser.add_argument('--nums', type=int, help='number of images to generate', default=None)
+    parser.add_argument('--random_image', action='store_true', help='randomly select image', default=False)
 
     parser.add_argument('--random_resize_mask', action='store_true', help='randomly resize the mask', default=False)
     parser.add_argument('--random_crop_mask', action='store_true',
@@ -192,4 +207,4 @@ if __name__ == '__main__':
     models =[instantiate_from_config(i.model).cuda().eval() for i in merged_config.models]
     samplers = [DDIMSampler(model, opt.steps) for model in models]
     # image_quality_compare(models, samplers, image_list, mask_list, opt)
-    gen_samples(models, samplers, image_list, mask_list, opt, nums=opt.nums, random_image=True)
+    gen_samples(models, samplers, image_list, mask_list, opt, nums=opt.nums, random_image=opt.random_image)
