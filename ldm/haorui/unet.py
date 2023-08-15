@@ -38,7 +38,12 @@ class SwinUNETR(pl.LightningModule):
 
 
 class Unet(pl.LightningModule):
-    def __init__(self, in_channel=3, out_channel=1, image_size=(256, 256), channels=(16, 32, 64, 128, 256), strides=(2, 2, 2, 2)):
+    def __init__(self, in_channel=3,
+                 out_channel=1,
+                 image_size=(256, 256),
+                 channels=(16, 32, 64, 128, 256),
+                 strides=(2, 2, 2, 2),
+                 ckpt_path=None):
         super().__init__()
         self.image_size = image_size
         self.in_channel = in_channel
@@ -54,6 +59,12 @@ class Unet(pl.LightningModule):
         )
         self.dice_loss = DiceLoss(sigmoid=True)  # sigmoid=True for binary label
         count_params(self, verbose=True)
+        if ckpt_path is not None:
+            ckpt = torch.load(ckpt_path, map_location='cpu')
+            if "state_dict" in list(ckpt.keys()):
+                ckpt = ckpt["state_dict"]
+            self.load_state_dict(ckpt)
+            print(f'Loaded checkpoint from {ckpt_path}')
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
         return optimizer

@@ -13,6 +13,7 @@ from PIL import Image
 from tqdm import tqdm
 import numpy as np
 import torch
+from torchmetrics import Dice
 from main import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 import matplotlib.pyplot as plt
@@ -164,6 +165,47 @@ def gen_samples(models, samplers, image_list, mask_list, opt, nums=None, random_
             for future in concurrent.futures.as_completed(futures):
                 future.result()
 
+@torch.no_grad()
+def dice_compare(models, image_list, mask_list, opt):
+    def load_single_batch(index, image_list, mask_list, random_image, opt):
+        if random_image:
+            return load_batch(image_list, mask_list, np.random.randint(len(image_list)), opt.mask_shuffle,
+                              opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
+        else:
+            return load_batch(image_list, mask_list, min(index, len(image_list) - 1), opt.mask_shuffle,
+                              opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
+    res = []
+    dice_func = Dice().cuda()
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        for model in models:
+            model.eval()
+            dice_list = []
+            for item in tqdm(range(0, len(image_list), opt.batch_size)):
+                future_to_index = {executor.submit(load_single_batch, item + i, image_list, mask_list, False, opt): i
+                                   for i in range(opt.batch_size)}
+                batches = []
+                for future in concurrent.futures.as_completed(future_to_index):
+                    batches.append(future.result())
+                batch = dict()
+                for key in batches[0].keys():
+                    batch[key] = torch.cat([b[key] for b in batches], dim=0) if isinstance(batches[0][key], torch.Tensor) \
+                        else [b[key] for b in batches]
+
+                input_image = batch['image']
+                mask = batch['mask']
+                mask = (mask + 1) / 2  # convert to 0-1
+                mask = mask.to(torch.int32)
+                pred = model(input_image)
+                pred[pred > 0] = 1
+                pred[pred <= 0] = 0
+                pred = pred.to(torch.int32)
+                dice_list.append(dice_func(pred, mask).cpu().numpy() * len(input_image))
+            res.append(np.sum(dice_list) / len(image_list))
+    print(res)
+    return res
+
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--base', type=str, default='configs/polyp.yaml')
@@ -205,6 +247,7 @@ if __name__ == '__main__':
                 mask_list.append(line.strip())
 
     models =[instantiate_from_config(i.model).cuda().eval() for i in merged_config.models]
-    samplers = [DDIMSampler(model, opt.steps) for model in models]
+    # samplers = [DDIMSampler(model, opt.steps) for model in models]
     # image_quality_compare(models, samplers, image_list, mask_list, opt)
-    gen_samples(models, samplers, image_list, mask_list, opt, nums=opt.nums, random_image=opt.random_image)
+    # gen_samples(models, samplers, image_list, mask_list, opt, nums=opt.nums, random_image=opt.random_image)
+    dice_compare(models, image_list, mask_list, opt)

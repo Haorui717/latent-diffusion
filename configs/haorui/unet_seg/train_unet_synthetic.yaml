@@ -37,7 +37,7 @@ data:
       params:
         size: 256
         image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/synthetic_merged/val_images.txt
-        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/synthetic_merged/val_images.txt
+        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/synthetic_merged/val_masks.txt
         transpose: True
 
 

@@ -68,6 +68,28 @@ ldm: &ldm_model
           target: torch.nn.Identity
     cond_stage_config: __is_first_stage__  # to be checked
 
+unet: &unet_model
+  target: ldm.haorui.unet.Unet
+  base_learning_rate: 1.0e-04
+  params:
+#    in_channel=3, out_channel=1, image_size=(256, 256), channels=(16, 32, 64, 128, 256), strides=(2, 2, 2, 2)
+    in_channel: 3
+    out_channel: 1
+    image_size:
+      - 256
+      - 256
+    channels:
+      - 32
+      - 64
+      - 128
+      - 256
+      - 512
+    strides:
+      - 2
+      - 2
+      - 2
+      - 2
+
 models:
 #  - model: *ldm_model
 #    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-07-27T23-47-41_ldm_polyp/2023-07-27T23-48-21_ldm_polyp_100/checkpoints/epoch=000267.ckpt
