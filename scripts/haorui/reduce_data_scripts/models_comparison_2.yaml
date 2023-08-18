@@ -94,4 +94,4 @@ models:
   - model: *unet_model
     ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-08-09T23-54-13_train_unet/checkpoints/epoch=000088.ckpt
   - model: *unet_model
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-08-14T15-47-42_train_unet_synthetic/checkpoints/epoch=000192.ckpt
+    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-08-15T01-09-53_train_unet_synthetic/checkpoints/epoch=000347.ckpt

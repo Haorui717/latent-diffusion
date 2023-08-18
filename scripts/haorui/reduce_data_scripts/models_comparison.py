@@ -247,7 +247,7 @@ if __name__ == '__main__':
                 mask_list.append(line.strip())
 
     models =[instantiate_from_config(i.model).cuda().eval() for i in merged_config.models]
-    # samplers = [DDIMSampler(model, opt.steps) for model in models]
+    samplers = [DDIMSampler(model, opt.steps) for model in models]
     # image_quality_compare(models, samplers, image_list, mask_list, opt)
-    # gen_samples(models, samplers, image_list, mask_list, opt, nums=opt.nums, random_image=opt.random_image)
-    dice_compare(models, image_list, mask_list, opt)
+    gen_samples(models, samplers, image_list, mask_list, opt, nums=opt.nums, random_image=opt.random_image)
+    # dice_compare(models, image_list, mask_list, opt)
