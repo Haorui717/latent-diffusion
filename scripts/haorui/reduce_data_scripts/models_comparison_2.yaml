@@ -92,6 +92,8 @@ unet: &unet_model
 
 models:
   - model: *unet_model
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-08-09T23-54-13_train_unet/checkpoints/epoch=000088.ckpt
-  - model: *unet_model
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-08-15T01-09-53_train_unet_synthetic/checkpoints/epoch=000347.ckpt
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-08-09T23-54-13_train_unet/checkpoints/epoch=000088.ckpt
+  - model: *unet_model  # synthetic images with 10_images model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-08-15T01-09-53_train_unet_synthetic/checkpoints/epoch=000382.ckpt
+  - model: *unet_model  # synthetic images with 900_images model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/2023-08-20T23-12-21_train_unet_synthetic/checkpoints/epoch=000999.ckpt

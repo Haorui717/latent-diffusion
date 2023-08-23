@@ -18,7 +18,7 @@ import numpy as np
 import torch
 from main import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 #%%
 image_rescaler = albumentations.SmallestMaxSize(max_size=256, interpolation=cv2.INTER_AREA)
 

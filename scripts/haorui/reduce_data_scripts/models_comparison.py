@@ -16,7 +16,7 @@ import torch
 from torchmetrics import Dice
 from main import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from scripts.haorui.gen_polyp_custom import reshape_mask, load_batch
 
@@ -140,7 +140,7 @@ def gen_samples(models, samplers, image_list, mask_list, opt, nums=None, random_
             for i in range(len(models)):
                 model = models[i]
                 sampler = samplers[i]
-                samples_ddim, _ = sampler.sample(S=opt.steps,
+                samples_ddim, _ = sampler.sample(S=opt.steps[i],
                                                  conditioning=c,
                                                  batch_size=c.shape[0],
                                                  shape=shape,
@@ -214,7 +214,7 @@ if __name__ == '__main__':
     parser.add_argument('--mask_shuffle', action='store_true', help='shuffle the mask list', default=False)
     parser.add_argument('--batch_size', type=int, help='batch size', default=4)
     parser.add_argument('--outdir', type=str, help='output directory', required=True)
-    parser.add_argument('--steps', type=int, help='denoise steps', default=200)
+    parser.add_argument('--steps',nargs='*', type=int, help='denoise steps', default=[200])
     parser.add_argument('--nums', type=int, help='number of images to generate', default=None)
     parser.add_argument('--random_image', action='store_true', help='randomly select image', default=False)
 
@@ -226,13 +226,20 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action='store_true', help='debug mode, do not log', default=False)
     opt = parser.parse_args()
 
+    # create output directory
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     opt.outdir = os.path.join(opt.outdir, now)
     os.makedirs(opt.outdir, exist_ok=True)
+
     # copy config file to output directory
     merged_config = OmegaConf.merge(OmegaConf.load(opt.base), OmegaConf.create({"opt":vars(opt)}))
     OmegaConf.save(merged_config, os.path.join(opt.outdir, 'config.yaml'))
 
+    # broadcast opt.steps to each model
+    if len(opt.steps) == 1:
+        opt.steps = opt.steps * len(merged_config.models)
+    assert len(opt.steps) == len(merged_config.models), "number of steps must match number of models"
+    
     for model in merged_config.models:
         model.model.params.ckpt_path = model.ckpt_path
 
@@ -247,7 +254,7 @@ if __name__ == '__main__':
                 mask_list.append(line.strip())
 
     models =[instantiate_from_config(i.model).cuda().eval() for i in merged_config.models]
-    samplers = [DDIMSampler(model, opt.steps) for model in models]
+    samplers = [DDIMSampler(model, step) for model, step in zip(models, opt.steps)]
     # image_quality_compare(models, samplers, image_list, mask_list, opt)
     gen_samples(models, samplers, image_list, mask_list, opt, nums=opt.nums, random_image=opt.random_image)
     # dice_compare(models, image_list, mask_list, opt)

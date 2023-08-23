@@ -1,6 +1,6 @@
 model:
   target: ldm.haorui.unet.Unet
-  base_learning_rate: 1.0e-04
+  base_learning_rate: 1.0e-03  # 1.0e-04
   params:
 #    in_channel=3, out_channel=1, image_size=(256, 256), channels=(16, 32, 64, 128, 256), strides=(2, 2, 2, 2)
     in_channel: 3
@@ -9,11 +9,12 @@ model:
       - 256
       - 256
     channels:
+      - 16  # smaller model
       - 32
       - 64
       - 128
       - 256
-      - 512
+      # - 512  # larger model
     strides:
       - 2
       - 2
@@ -23,21 +24,21 @@ model:
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 8
+    batch_size: 48
     wrap: True
     train:
       target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
         size: 256
-        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_images.txt
-        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_masks.txt
+        image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_images.txt
+        mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_masks.txt
         transpose: True
     validation:
       target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
         size: 256
-        image_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_val_images.txt
-        mask_path: /home/zongwei/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_val_masks.txt
+        image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_val_images.txt
+        mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_val_masks.txt
         transpose: True
 
 

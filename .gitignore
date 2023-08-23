@@ -1,5 +1,6 @@
-./logs
-./outputs
+logs
+outputs
+nohup_log
 ./__pycache__
 *.ipynb_checkpoints
 *.pyc

@@ -1,0 +1,28 @@
+unet: &unet_model
+  target: ldm.haorui.unet.Unet
+  base_learning_rate: 1.0e-04
+  params:
+#    in_channel=3, out_channel=1, image_size=(256, 256), channels=(16, 32, 64, 128, 256), strides=(2, 2, 2, 2)
+    in_channel: 3
+    out_channel: 1
+    image_size:
+      - 256
+      - 256
+    channels:
+      # - 16  # smaller model
+      - 32
+      - 64
+      - 128
+      - 256
+      - 512  # larger model
+    strides:
+      - 2
+      - 2
+      - 2
+      - 2
+
+models:
+  - model: *unet_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-08-09T23-54-13_train_unet/checkpoints/epoch=000088.ckpt
+  - model: *unet_model  # synthetic images with 10_images model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-08-15T01-09-53_train_unet_synthetic/checkpoints/epoch=000382.ckpt
