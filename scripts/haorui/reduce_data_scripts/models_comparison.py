@@ -13,12 +13,12 @@ from PIL import Image
 from tqdm import tqdm
 import numpy as np
 import torch
-from torchmetrics import Dice
+from torchmetrics import Dice, Recall, Precision, JaccardIndex
 from main import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 # import matplotlib.pyplot as plt
 
-from scripts.haorui.gen_polyp_custom import reshape_mask, load_batch
+from util.gen_polyp_utils import reshape_mask, load_batch
 
 image_rescaler = albumentations.SmallestMaxSize(max_size=256, interpolation=cv2.INTER_AREA)
 
@@ -174,12 +174,18 @@ def dice_compare(models, image_list, mask_list, opt):
         else:
             return load_batch(image_list, mask_list, min(index, len(image_list) - 1), opt.mask_shuffle,
                               opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
-    res = []
+    dice_res, precision_res, recall_res, IoU_res = [], [], [], []
     dice_func = Dice().cuda()
+    precision_func = Precision(task="binary").cuda()
+    recall_func = Recall(task="binary").cuda()
+    IoU_func = JaccardIndex(task="binary").cuda()
     with ThreadPoolExecutor(max_workers=16) as executor:
         for model in models:
             model.eval()
             dice_list = []
+            precision_list = []
+            recall_list = []
+            IoU_list = []
             for item in tqdm(range(0, len(image_list), opt.batch_size)):
                 future_to_index = {executor.submit(load_single_batch, item + i, image_list, mask_list, False, opt): i
                                    for i in range(opt.batch_size)}
@@ -200,9 +206,32 @@ def dice_compare(models, image_list, mask_list, opt):
                 pred[pred <= 0] = 0
                 pred = pred.to(torch.int32)
                 dice_list.append(dice_func(pred, mask).cpu().numpy() * len(input_image))
-            res.append(np.sum(dice_list) / len(image_list))
-    print(res)
-    return res
+                precision_list.append(precision_func(pred, mask).cpu().numpy() * len(input_image))
+                recall_list.append(recall_func(pred, mask).cpu().numpy() * len(input_image))
+                IoU_list.append(IoU_func(pred, mask).cpu().numpy() * len(input_image))
+            dice_res.append(np.sum(dice_list) / len(image_list))
+            precision_res.append(np.sum(precision_list) / len(image_list))
+            recall_res.append(np.sum(recall_list) / len(image_list))
+            IoU_res.append(np.sum(IoU_list) / len(image_list))
+    with open(os.path.join(opt.outdir, 'results.txt'), 'w') as f:
+        f.write('dice:\n')
+        for i in range(len(models)):
+            f.write(f'{i}: {dice_res[i]}\n')
+        f.write('precision:\n')
+        for i in range(len(models)):
+            f.write(f'{i}: {precision_res[i]}\n')
+        f.write('recall:\n')
+        for i in range(len(models)):
+            f.write(f'{i}: {recall_res[i]}\n')
+        f.write('IoU:\n')
+        for i in range(len(models)):
+            f.write(f'{i}: {IoU_res[i]}\n')
+
+    print("dice", dice_res)
+    print("precision", precision_res)
+    print("recall", recall_res)
+    print("IoU", IoU_res)
+    return dice_res, precision_res, recall_res, IoU_res
 
 
 
@@ -254,7 +283,7 @@ if __name__ == '__main__':
                 mask_list.append(line.strip())
 
     models =[instantiate_from_config(i.model).cuda().eval() for i in merged_config.models]
-    samplers = [DDIMSampler(model, step) for model, step in zip(models, opt.steps)]
+    # samplers = [DDIMSampler(model, step) for model, step in zip(models, opt.steps)]
     # image_quality_compare(models, samplers, image_list, mask_list, opt)
-    gen_samples(models, samplers, image_list, mask_list, opt, nums=opt.nums, random_image=opt.random_image)
-    # dice_compare(models, image_list, mask_list, opt)
+    # gen_samples(models, samplers, image_list, mask_list, opt, nums=opt.nums, random_image=opt.random_image)
+    dice_compare(models, image_list, mask_list, opt)

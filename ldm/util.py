@@ -1,4 +1,7 @@
 import importlib
+import sys
+import io
+from contextlib import contextmanager
 
 import torch
 import numpy as np
@@ -201,3 +204,21 @@ def parallel_data_prefetch(
         return out
     else:
         return gather_res
+
+
+@contextmanager
+def NO_OUTPUT():  # no output to stdout and stderr (tqdm messages)
+    # Store the original stdout and stderr
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    
+    # Redirect stdout and stderr to a null device
+    sys.stdout = io.StringIO()
+    sys.stderr = io.StringIO()
+
+    try:
+        yield
+    finally:
+        # Restore the original stdout and stderr
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr

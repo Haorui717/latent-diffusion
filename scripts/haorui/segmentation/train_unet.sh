@@ -1,1 +1,3 @@
-nohup python main.py --base configs/haorui/unet_seg/train_unet.yaml --logdir logs/segmentation -t --gpus 0, > nohup_log/segmentation/log_$(date +"%Y:%m:%d:%H:%M:%S").txt 2>&1 &
+# nohup python main.py --base configs/haorui/unet_seg/train_unet.yaml --logdir logs/segmentation -t --gpus 0, > nohup_log/segmentation/log_$(date +"%Y:%m:%d:%H:%M:%S").txt 2>&1 &
+nohup python main.py --base configs/haorui/unet_seg/train_unet_synthetic_onthefly.yaml --logdir logs/segmentation -t --gpus 3,4,5,6,7 \
+     --resume /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/2023-08-28T17-22-05_train_unet_synthetic_onthefly > nohup_log/segmentation/log_$(date +"%Y:%m:%d:%H:%M:%S").txt 2>&1 &

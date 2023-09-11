@@ -1,0 +1,3 @@
+reduce the real training images.
+Because I think the limit of the Unet is 0.85.
+So try to reduce the number of training images.

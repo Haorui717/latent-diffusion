@@ -1,0 +1,55 @@
+model:
+  target: ldm.haorui.unet.Unet
+  base_learning_rate: 1.0e-04
+  params:
+#    in_channel=3, out_channel=1, image_size=(256, 256), channels=(16, 32, 64, 128, 256), strides=(2, 2, 2, 2)
+    in_channel: 3
+    out_channel: 1
+    image_size:
+      - 256
+      - 256
+    channels:
+      # - 16  # smaller model
+      - 32
+      - 64
+      - 128
+      - 256
+      - 512  # larger model
+    strides:
+      - 2
+      - 2
+      - 2
+      - 2
+
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 48
+    wrap: True
+    train:
+      target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
+      params:
+        size: 256
+        image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/shuffle_10_images/CVC_10images_02.txt
+        mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/shuffle_10_images/CVC_10masks_02.txt
+        transpose: True
+    validation:
+      target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
+      params:
+        size: 256
+        image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_val_images.txt
+        mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_val_masks.txt
+        transpose: True
+
+
+lightning:
+  callbacks:
+    image_logger:
+      target: main.ImageLogger
+      params:
+        batch_frequency: 200
+        max_images: 8
+        increase_log_steps: False
+
+  trainer:
+    benchmark: True

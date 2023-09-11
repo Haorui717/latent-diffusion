@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local')
+from typing import Any
 import torch
 import torch.nn as nn
 import numpy as np
@@ -6,8 +9,10 @@ from monai.losses import DiceLoss
 from monai.transforms import Activations, AsDiscrete
 from monai.inferers import sliding_window_inference
 import pytorch_lightning as pl
-from ldm.util import count_params
 
+from ldm.models.diffusion.ddim import DDIMSampler
+from ldm.util import count_params
+from ldm.util import instantiate_from_config, NO_OUTPUT
 
 class SwinUNETR(pl.LightningModule):
     def __init__(self):
@@ -66,7 +71,8 @@ class Unet(pl.LightningModule):
             self.load_state_dict(ckpt)
             print(f'Loaded checkpoint from {ckpt_path}')
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+        lr = self.learning_rate
+        optimizer = torch.optim.Adam(self.unet.parameters(), lr=lr)
         return optimizer
     def forward(self, x):
         return self.unet(x)
@@ -100,5 +106,103 @@ class Unet(pl.LightningModule):
         log['pred'] = pred
         # compare pred and mask and image
         log['compare'] = torch.cat([log['image'], log['mask'].repeat(1, 3, 1, 1) , log['pred'].repeat(1, 3, 1, 1)], dim=3)
+
+        return log
+    
+
+class Unet_ldm(pl.LightningModule):
+    '''
+    Unet with latent diffusion model which synthesize polyps on the fly.
+    '''
+    def __init__(self, ldm_config=None, sampler_steps=40,
+                 in_channels=3,
+                 out_channels=1,
+                 image_size=(256, 256),
+                 channels=(16, 32, 64, 128, 256),
+                 strides=(2, 2, 2, 2),
+                 ckpt_path=None
+                 ) -> None:
+        super().__init__()
+        self.unet = monai_nets.UNet(
+            spatial_dims=2,
+            in_channels=in_channels,
+            out_channels=out_channels,
+            channels=channels,
+            strides=strides,
+        )
+        self.dice_loss = DiceLoss(sigmoid=True)  # sigmoid=True for binary label
+        self.ldm_config = ldm_config
+        self.ldm = instantiate_from_config(self.ldm_config)
+        for param in self.ldm.parameters():
+            param.requires_grad = False
+        self.sampler = DDIMSampler(self.ldm)
+        self.sampler_steps = sampler_steps
+        if ckpt_path is not None:
+            ckpt = torch.load(ckpt_path, map_location='cpu')
+            if "state_dict" in list(ckpt.keys()):
+                ckpt = ckpt["state_dict"]
+            self.load_state_dict(ckpt)
+            print(f'Loaded checkpoint from {ckpt_path}')
+
+    def configure_optimizers(self):
+        lr = self.learning_rate
+        optimizer = torch.optim.Adam(self.unet.parameters(), lr=lr)
+        return optimizer
+    
+    def forward(self, x):  # only pass the unet
+        return self.unet(x)
+    
+    @torch.no_grad()
+    def gen_polyps(self, batch):  # generate polyps on the fly
+        images = batch['image']
+        masks = batch['mask']
+        masked_images = batch['masked_image']
+        condition = self.ldm.cond_stage_model.encode(masked_images)
+        m_condition = torch.nn.functional.interpolate(masks, size=condition.shape[-2:])
+        c = torch.cat([condition, m_condition], dim=1)
+        shape = (c.shape[1] - 1,) + c.shape[2:]
+        with NO_OUTPUT():
+            samples_ddim, _ = self.sampler.sample(S=self.sampler_steps,
+                                                conditioning=c,
+                                                batch_size=c.shape[0],
+                                                shape=shape,
+                                                verbose=False)
+        synthetic_images = self.ldm.decode_first_stage(samples_ddim)
+        synthetic_images = torch.clamp(synthetic_images, -1, 1)
+        return images, masks, masked_images, synthetic_images
+
+    def training_step(self, batch, batch_idx):
+        images, masks, masked_images, synthetic_images = self.gen_polyps(batch)
+        masks = (masks + 1) / 2  # convert to 0-1
+        outputs = self.unet(synthetic_images)
+        loss = self.dice_loss(outputs, masks)
+        self.log('train_loss', loss)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        images, masks, masked_images, synthetic_images = self.gen_polyps(batch)
+        masks = (masks + 1) / 2  # convert to 0-1
+        outputs = self.unet(synthetic_images)
+        loss = self.dice_loss(outputs, masks)
+        self.log('val_loss', loss)
+        return loss
+
+    @torch.no_grad()
+    def log_images(self, batch, N=8, **kwargs):
+        images, masks, masked_images, synthetic_images = self.gen_polyps(batch)
+        log = dict()
+        N = min(N, len(images))
+        log['image'] = images[:N]
+        log['mask'] = masks[:N]
+        log['masked_image'] = masked_images[:N]
+        log['synthetic_image'] = synthetic_images[:N]
+
+
+        pred = self.unet(synthetic_images)[:N]
+        pred[pred > 0] = 1
+        pred[pred <= 0] = -1
+        log['pred'] = pred
+        # compare pred and mask and image
+        log['compare'] = torch.cat([log['image'], log['synthetic_image'], log['mask'].repeat(1, 3, 1, 1) , log['pred'].repeat(1, 3, 1, 1)], dim=3)
 
         return log
