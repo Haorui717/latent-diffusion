@@ -174,13 +174,20 @@ def dice_compare(models, image_list, mask_list, opt):
         else:
             return load_batch(image_list, mask_list, min(index, len(image_list) - 1), opt.mask_shuffle,
                               opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
+    def save_compare_masks(pred, mask):
+        '''
+        pred: (B, 1, H, W)
+        mask: (B, 1, H, W)
+        '''
+
+
     dice_res, precision_res, recall_res, IoU_res = [], [], [], []
     dice_func = Dice().cuda()
     precision_func = Precision(task="binary").cuda()
     recall_func = Recall(task="binary").cuda()
     IoU_func = JaccardIndex(task="binary").cuda()
     with ThreadPoolExecutor(max_workers=16) as executor:
-        for model in models:
+        for idx, model in enumerate(models):
             model.eval()
             dice_list = []
             precision_list = []
@@ -209,6 +216,17 @@ def dice_compare(models, image_list, mask_list, opt):
                 precision_list.append(precision_func(pred, mask).cpu().numpy() * len(input_image))
                 recall_list.append(recall_func(pred, mask).cpu().numpy() * len(input_image))
                 IoU_list.append(IoU_func(pred, mask).cpu().numpy() * len(input_image))
+                # save and compare predicted results and masks
+                pred = pred.cpu().numpy().transpose(0, 2, 3, 1) * 255.0
+                pred = pred.astype(np.uint8)
+                mask = mask.cpu().numpy().transpose(0, 2, 3, 1) * 255.0
+                mask = mask.astype(np.uint8)
+                for i in range(len(input_image)):  # for each result in the batch
+                    combined = np.concatenate([(input_image[i].cpu().numpy().transpose(1, 2, 0) + 1) / 2 * 255.0,
+                                               pred[i].repeat(3, axis=2),
+                                               mask[i].repeat(3, axis=2)], axis=1).astype(np.uint8)
+                    save_image_with_suffix(combined, os.path.join(opt.outdir, 'combined', str(idx)), os.path.basename(batch['image_path'][i]))
+
             dice_res.append(np.sum(dice_list) / len(image_list))
             precision_res.append(np.sum(precision_list) / len(image_list))
             recall_res.append(np.sum(recall_list) / len(image_list))

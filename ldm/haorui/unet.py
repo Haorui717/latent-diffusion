@@ -43,26 +43,42 @@ class SwinUNETR(pl.LightningModule):
 
 
 class Unet(pl.LightningModule):
-    def __init__(self, in_channel=3,
-                 out_channel=1,
-                 image_size=(256, 256),
-                 channels=(16, 32, 64, 128, 256),
-                 strides=(2, 2, 2, 2),
-                 ckpt_path=None):
+    def __init__(self, 
+                #  in_channel=3,
+                #  out_channel=1,
+                #  image_size=(256, 256),
+                #  channels=(16, 32, 64, 128, 256),
+                #  strides=(2, 2, 2, 2),
+                 unet_config,
+                 dice=True,
+                 bce=True,
+                 ckpt_path=None,
+                 image_scale_01=False):
         super().__init__()
-        self.image_size = image_size
-        self.in_channel = in_channel
-        self.out_channel = out_channel
-        self.channels = channels
-        self.strides = strides
-        self.unet = monai_nets.UNet(
-            spatial_dims=2,
-            in_channels=self.in_channel,
-            out_channels=self.out_channel,
-            channels=self.channels,
-            strides=self.strides,
-        )
-        self.dice_loss = DiceLoss(sigmoid=True)  # sigmoid=True for binary label
+        # self.image_size = image_size
+        # self.in_channel = in_channel
+        # self.out_channel = out_channel
+        # self.channels = channels
+        # self.strides = strides
+        # self.unet = monai_nets.UNet(
+        #     spatial_dims=2,
+        #     in_channels=self.in_channel,
+        #     out_channels=self.out_channel,
+        #     channels=self.channels,
+        #     strides=self.strides,
+        # )
+        self.unet = instantiate_from_config(unet_config)
+        self.dice = dice
+        self.bce = bce
+        self.image_scale_01 = image_scale_01
+        if self.dice:
+            self.dice_loss = DiceLoss(sigmoid=True)  # sigmoid=True for binary label
+        else:
+            self.dice_loss = None
+        if self.bce:
+            self.bce_loss = torch.nn.BCEWithLogitsLoss()
+        else:
+            self.bce_loss = None
         count_params(self, verbose=True)
         if ckpt_path is not None:
             ckpt = torch.load(ckpt_path, map_location='cpu')
@@ -75,13 +91,26 @@ class Unet(pl.LightningModule):
         optimizer = torch.optim.Adam(self.unet.parameters(), lr=lr)
         return optimizer
     def forward(self, x):
+        if self.image_scale_01:
+            x = (x + 1) / 2
         return self.unet(x)
     def training_step(self, batch, batch_idx):
         images = batch['image']
         masks = batch['mask']
         masks = (masks + 1) / 2  # convert to 0-1
+        if self.image_scale_01:
+            images = (images + 1) / 2
         outputs = self.unet(images)
-        loss = self.dice_loss(outputs, masks)
+        loss = 0
+        if self.dice:
+            dice_loss = self.dice_loss(outputs, masks)
+            self.log('dice_loss', dice_loss)
+            loss += dice_loss
+        if self.bce:
+            bce_loss = self.bce_loss(outputs, masks)
+            self.log('bce_loss', bce_loss)
+            loss += bce_loss
+        loss = dice_loss + bce_loss
         self.log('train_loss', loss)
         return loss
 
@@ -89,8 +118,14 @@ class Unet(pl.LightningModule):
         images = batch['image']
         masks = batch['mask']
         masks = (masks + 1) / 2  # convert to 0-1
+        if self.image_scale_01:
+            images = (images + 1) / 2
         outputs = self.unet(images)
-        loss = self.dice_loss(outputs, masks)
+        dice_loss = self.dice_loss(outputs, masks)
+        bce_loss = self.bce_loss(outputs, masks)
+        loss = dice_loss + bce_loss
+        self.log('dice_loss', dice_loss)
+        self.log('bce_loss', bce_loss)
         self.log('val_loss', loss)
         return loss
 
@@ -98,9 +133,13 @@ class Unet(pl.LightningModule):
     def log_images(self, batch, N=8, **kwargs):
         log = dict()
         N = min(N, len(batch['image']))
+        if self.image_scale_01:
+            batch['image'] = (batch['image'] + 1) / 2
+        pred = self.unet(batch['image'])[:N]
+        if self.image_scale_01:
+            batch['image'] = batch['image'] * 2 - 1
         log['image'] = batch['image'][:N]
         log['mask'] = batch['mask'][:N]
-        pred = self.unet(batch['image'])[:N]
         pred[pred > 0] = 1
         pred[pred <= 0] = -1
         log['pred'] = pred

@@ -739,11 +739,12 @@ if __name__ == "__main__":
             trainer.test(model, data)
     except Exception:
         if opt.debug and trainer.global_rank == 0:
-            try:
-                import pudb as debugger
-            except ImportError:
-                import pdb as debugger
-            debugger.post_mortem()
+            # try:
+            #     import pudb as debugger
+            # except ImportError:
+            #     import pdb as debugger
+            # debugger.post_mortem()
+            pass
         raise
     finally:
         # move newly created debug project to debug_runs
