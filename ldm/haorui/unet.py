@@ -105,11 +105,9 @@ class Unet(pl.LightningModule):
         if self.dice:
             dice_loss = self.dice_loss(outputs, masks)
             self.log('dice_loss', dice_loss)
-            loss += dice_loss
         if self.bce:
             bce_loss = self.bce_loss(outputs, masks)
             self.log('bce_loss', bce_loss)
-            loss += bce_loss
         loss = dice_loss + bce_loss
         self.log('train_loss', loss)
         return loss
@@ -153,29 +151,45 @@ class Unet_ldm(pl.LightningModule):
     '''
     Unet with latent diffusion model which synthesize polyps on the fly.
     '''
-    def __init__(self, ldm_config=None, sampler_steps=40,
-                 in_channels=3,
-                 out_channels=1,
-                 image_size=(256, 256),
-                 channels=(16, 32, 64, 128, 256),
-                 strides=(2, 2, 2, 2),
-                 ckpt_path=None
+    def __init__(self, unet_config, ldm_config=None, sampler_steps=40,
+                #  in_channels=3,
+                #  out_channels=1,
+                #  image_size=(256, 256),
+                #  channels=(16, 32, 64, 128, 256),
+                #  strides=(2, 2, 2, 2),
+                 dice=True,
+                 bce=True,
+                 ckpt_path=None,
+                 image_scale_01=False
                  ) -> None:
         super().__init__()
-        self.unet = monai_nets.UNet(
-            spatial_dims=2,
-            in_channels=in_channels,
-            out_channels=out_channels,
-            channels=channels,
-            strides=strides,
-        )
-        self.dice_loss = DiceLoss(sigmoid=True)  # sigmoid=True for binary label
+        # self.unet = monai_nets.UNet(
+        #     spatial_dims=2,
+        #     in_channels=in_channels,
+        #     out_channels=out_channels,
+        #     channels=channels,
+        #     strides=strides,
+        # )
+        self.image_scale_01 = image_scale_01
+        self.unet = instantiate_from_config(unet_config)
+        self.dice = dice
+        self.bce = bce
+        if self.dice:
+            self.dice_loss = DiceLoss(sigmoid=True)  # sigmoid=True for binary label
+        else:
+            self.dice_loss = None
+        if self.bce:
+            self.bce_loss = torch.nn.BCEWithLogitsLoss()
+        else:
+            self.bce_loss = None
+
         self.ldm_config = ldm_config
         self.ldm = instantiate_from_config(self.ldm_config)
         for param in self.ldm.parameters():
             param.requires_grad = False
         self.sampler = DDIMSampler(self.ldm)
         self.sampler_steps = sampler_steps
+
         if ckpt_path is not None:
             ckpt = torch.load(ckpt_path, map_location='cpu')
             if "state_dict" in list(ckpt.keys()):
@@ -189,6 +203,8 @@ class Unet_ldm(pl.LightningModule):
         return optimizer
     
     def forward(self, x):  # only pass the unet
+        if self.image_scale_01:
+            x = (x + 1) / 2
         return self.unet(x)
     
     @torch.no_grad()
@@ -213,34 +229,54 @@ class Unet_ldm(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         images, masks, masked_images, synthetic_images = self.gen_polyps(batch)
         masks = (masks + 1) / 2  # convert to 0-1
+        if self.image_scale_01:
+            synthetic_images = (synthetic_images + 1) / 2
         outputs = self.unet(synthetic_images)
-        loss = self.dice_loss(outputs, masks)
+        loss = 0
+        if self.dice:
+            dice_loss = self.dice_loss(outputs, masks)
+            self.log('dice_loss', dice_loss)
+        if self.bce:
+            bce_loss = self.bce_loss(outputs, masks)
+            self.log('bce_loss', bce_loss)
+        loss = dice_loss + bce_loss
         self.log('train_loss', loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
         images, masks, masked_images, synthetic_images = self.gen_polyps(batch)
         masks = (masks + 1) / 2  # convert to 0-1
+        if self.image_scale_01:
+            synthetic_images = (synthetic_images + 1) / 2
         outputs = self.unet(synthetic_images)
-        loss = self.dice_loss(outputs, masks)
+        loss = 0
+        if self.dice:
+            dice_loss = self.dice_loss(outputs, masks)
+            self.log('dice_loss', dice_loss)
+        if self.bce:
+            bce_loss = self.bce_loss(outputs, masks)
+            self.log('bce_loss', bce_loss)
+        loss = dice_loss + bce_loss
         self.log('val_loss', loss)
         return loss
 
     @torch.no_grad()
     def log_images(self, batch, N=8, **kwargs):
         images, masks, masked_images, synthetic_images = self.gen_polyps(batch)
+        if self.image_scale_01:
+            synthetic_images = (synthetic_images + 1) / 2
+        pred = self.unet(synthetic_images)
+        if self.image_scale_01:
+            synthetic_images = synthetic_images * 2 - 1
+        pred[pred > 0] = 1
+        pred[pred <= 0] = -1
         log = dict()
         N = min(N, len(images))
         log['image'] = images[:N]
         log['mask'] = masks[:N]
         log['masked_image'] = masked_images[:N]
         log['synthetic_image'] = synthetic_images[:N]
-
-
-        pred = self.unet(synthetic_images)[:N]
-        pred[pred > 0] = 1
-        pred[pred <= 0] = -1
-        log['pred'] = pred
+        log['pred'] = pred[:N]
         # compare pred and mask and image
         log['compare'] = torch.cat([log['image'], log['synthetic_image'], log['mask'].repeat(1, 3, 1, 1) , log['pred'].repeat(1, 3, 1, 1)], dim=3)
 

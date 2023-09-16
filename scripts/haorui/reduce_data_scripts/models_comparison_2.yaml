@@ -73,45 +73,54 @@ unet: &unet_model
   base_learning_rate: 1.0e-04
   params:
 #    in_channel=3, out_channel=1, image_size=(256, 256), channels=(16, 32, 64, 128, 256), strides=(2, 2, 2, 2)
-    in_channel: 3
-    out_channel: 1
-    image_size:
-      - 256
-      - 256
-    channels:
-      - 32
-      - 64
-      - 128
-      - 256
-      - 512
-    strides:
-      - 2
-      - 2
-      - 2
-      - 2
+    unet_config:
+      target: monai.networks.nets.UNet
+      params:
+        in_channels: 3
+        out_channels: 1
+        # image_size:
+        #   - 256
+        #   - 256
+        spatial_dims: 2
+        channels:
+          # - 16
+          - 32
+          - 64
+          - 128
+          - 256
+          - 512
+        strides:
+          - 2
+          - 2
+          - 2
+          - 2
 
 unet_small: &unet_model_small
   target: ldm.haorui.unet.Unet
   base_learning_rate: 1.0e-04
   params:
 #    in_channel=3, out_channel=1, image_size=(256, 256), channels=(16, 32, 64, 128, 256), strides=(2, 2, 2, 2)
-    in_channel: 3
-    out_channel: 1
-    image_size:
-      - 256
-      - 256
-    channels:
-      - 16
-      - 32
-      - 64
-      - 128
-      - 256
-      # - 512
-    strides:
-      - 2
-      - 2
-      - 2
-      - 2
+    unet_config:
+      target: monai.networks.nets.UNet
+      params:
+        in_channels: 3
+        out_channels: 1
+        # image_size:
+        #   - 256
+        #   - 256
+        spatial_dims: 2
+        channels:
+          - 16
+          - 32
+          - 64
+          - 128
+          - 256
+          # - 512
+        strides:
+          - 2
+          - 2
+          - 2
+          - 2
 
 unet_ldm: &unet_ldm_model
   target: ldm.haorui.unet.Unet_ldm
@@ -176,23 +185,104 @@ unet_ldm: &unet_ldm_model
             lossconfig:
               target: torch.nn.Identity
         cond_stage_config: __is_first_stage__
-    sampler_steps: 20
-    in_channels: 3
-    out_channels: 1
-    image_size:
-    - 256
-    - 256
-    channels:
-    - 32
-    - 64
-    - 128
-    - 256
-    - 512
-    strides:
-    - 2
-    - 2
-    - 2
-    - 2
+    unet_config:
+      sampler_steps: 20
+      in_channels: 3
+      out_channels: 1
+      image_size:
+      - 256
+      - 256
+      channels:
+      - 32
+      - 64
+      - 128
+      - 256
+      - 512
+      strides:
+      - 2
+      - 2
+      - 2
+      - 2
+    image_scale_01: False
+
+resunetpp_ldm: &resunetpp_ldm_model
+  target: ldm.haorui.unet.Unet_ldm
+  base_learning_rate: 1.0e-05
+  params:
+#    in_channel=3, out_channel=1, image_size=(256, 256), channels=(16, 32, 64, 128, 256), strides=(2, 2, 2, 2)
+    ldm_config:
+      target: ldm.models.diffusion.ddpm.LatentDiffusion
+      params:
+        linear_start: 0.0015
+        linear_end: 0.0205
+        num_timesteps_cond: 1  # all other configs have this set to 1, why
+        timesteps: 1000
+        loss_type: l1
+        first_stage_key: image
+        cond_stage_key: masked_image
+        image_size: 32
+        channels: 4
+        concat_mode: true
+        cond_stage_trainable: false
+        conditioning_key: concat  # to be checked
+        monitor: val/loss_simple_ema  # what does this mean?
+        # ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-08-09_ldm_polyp_20/checkpoints/epoch=000213.ckpt
+        unet_config:
+          target: ldm.modules.diffusionmodules.openaimodel.UNetModel
+          params:
+            image_size: 32
+            in_channels: 9
+            out_channels: 4
+            model_channels: 128
+            attention_resolutions:
+            #note: this isn\t actually the resolution but
+            # the downsampling factor, i.e. this corresnponds to
+            # attention on spatial resolution 8,16,32, as the
+            # spatial reolution of the latents is 32 for f8
+            - 4
+            - 2
+            - 1
+            num_res_blocks: 2
+            channel_mult:
+            - 1
+            - 2
+            - 4
+            num_heads: 8
+            resblock_updown: true
+    #        num_head_channels: 32
+    #        use_spatial_transformer: true
+    #        transformer_depth: 1
+    #        context_dim: 512
+        first_stage_config:
+          target: ldm.models.autoencoder.VQModelInterface
+          params:
+            embed_dim: 4
+            n_embed: 16384
+    #        ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/__2023-07-25T18-20-02_vqf8_polyp_32x32x4/checkpoints/epoch=000204.ckpt
+            ddconfig:
+              double_z: false
+              z_channels: 4
+              resolution: 256
+              in_channels: 3
+              out_ch: 3
+              ch: 128
+              ch_mult:
+              - 1
+              - 2
+              - 2
+              - 4
+              num_res_blocks: 2
+              attn_resolutions:
+              - 32
+              dropout: 0.0
+            lossconfig:
+              target: torch.nn.Identity
+        cond_stage_config: __is_first_stage__  # to be checked
+    unet_config:
+      target: ldm.haorui.resunet.resunetpp.ResUnetPlusPlus
+      params:
+        channel: 3
+    image_scale_01: True
 
 resunetpp: &resunetpp_model
   target: ldm.haorui.unet.Unet
@@ -234,8 +324,8 @@ models:
   #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/real_reduce/lr1e-3/2023-08-29T15-33-03_train_unet_700/checkpoints/last.ckpt
   # - model: *unet_model_small
   #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/real_reduce/lr1e-3/2023-08-29T15-33-09_train_unet_800/checkpoints/last.ckpt
-  # - model: *unet_model_small
-  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/real_reduce/lr1e-3/2023-08-29T15-33-13_train_unet_900/checkpoints/last.ckpt
+  - model: *unet_model_small
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/real_reduce/lr1e-3/2023-08-29T15-33-13_train_unet_900/checkpoints/last.ckpt
   
   # # unet trained with reduces real images
   # - model: *unet_model
@@ -252,8 +342,8 @@ models:
   #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/real_reduce/lr1e-4_100-900/2023-08-30T14-16-32_train_unet_600/checkpoints/last.ckpt
   # - model: *unet_model
   #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/real_reduce/lr1e-4_100-900/2023-08-30T14-16-38_train_unet_700/checkpoints/last.ckpt
-  # - model: *unet_model
-  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/real_reduce/lr1e-4_100-900/2023-08-30T14-16-43_train_unet_800/checkpoints/last.ckpt
+  - model: *unet_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/real_reduce/lr1e-4_100-900/2023-08-30T14-16-43_train_unet_800/checkpoints/last.ckpt
   # - model: *unet_model  # 根本没训练
   #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/real_reduce/lr1e-4_100-900/2023-08-30T14-16-48_train_unet_900/checkpoints/last.ckpt
 
@@ -277,7 +367,7 @@ models:
   #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/real_reduce/2023-09-01T13-47-51_train_unet_90/checkpoints/last.ckpt
 
 
-  # # unet trained with different set of 10 images
+  # unet trained with different set of 10 images
   # - model: *unet_model
   #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/shuffle_10_configs/2023-09-05T19-46-07_train_unet_shuffle10_01/checkpoints/last.ckpt
   # - model: *unet_model
@@ -325,3 +415,10 @@ models:
   - model: *resunetpp_model
     ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/resunetpp/2023-09-13T17-43-56_train_resunetpp_10/checkpoints/last.ckpt
 
+  # resunetpp_ldm
+  - model: *resunetpp_ldm_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-14T16-24-52_train_resunetpp_onthefly_900/checkpoints/epoch=000399.ckpt
+  - model: *resunetpp_ldm_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-14T16-24-47_train_resunetpp_onthefly_20/checkpoints/epoch=000399.ckpt
+  - model: *resunetpp_ldm_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-14T16-24-42_train_resunetpp_onthefly_10/checkpoints/epoch=000389.ckpt
