@@ -1,0 +1,5 @@
+nohup python main.py --base configs/haorui/unet_seg/resunetpp/hyperparam_tune/reproduce_resunetpp_1.yaml --logdir logs/segmentation/resunetpp/reproduce -t --gpu 3,4\
+      --resume /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/resunetpp/reproduce/2023-09-19T00-40-34_reproduce_resunetpp_1  > nohup_log/segmentation/resunetpp/log_$(date +"%Y:%m:%d:%H:%M:%S").txt 2>&1 &
+sleep 5
+nohup python main.py --base configs/haorui/unet_seg/resunetpp/hyperparam_tune/reproduce_resunetpp_2.yaml  --logdir logs/segmentation/resunetpp/reproduce -t --gpu 5,6\
+      --resume /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/resunetpp/reproduce/2023-09-19T00-40-39_reproduce_resunetpp_2  > nohup_log/segmentation/resunetpp/log_$(date +"%Y:%m:%d:%H:%M:%S").txt 2>&1 &

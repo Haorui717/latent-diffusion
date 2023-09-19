@@ -1,12 +1,13 @@
 model:
   target: ldm.haorui.unet.Unet
-  base_learning_rate: 1.0e-05
+  base_learning_rate: 1.0e-04
   params:
     unet_config:
       target: ldm.haorui.resunet.resunetpp.ResUnetPlusPlus
       params:
         channel: 3
     image_scale_01: True
+    max_epochs: 2000
 
 data:
   target: main.DataModuleFromConfig
@@ -17,15 +18,15 @@ data:
       target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
         size: 256
-        image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_images_900.txt
-        mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_train_masks_900.txt
+        image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/CVC_train_images.txt
+        mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/CVC_train_masks.txt
         transpose: True
     validation:
       target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
         size: 256
-        image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_val_images.txt
-        mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/CVC_val_masks.txt
+        image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/CVC_val_images.txt
+        mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/CVC_val_masks.txt
         transpose: True
 
 lightning:
@@ -39,4 +40,4 @@ lightning:
 
   trainer:
     benchmark: True
-    max_epochs: 1000
+    max_epochs: 2000

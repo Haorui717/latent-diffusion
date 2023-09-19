@@ -50,6 +50,7 @@ class Unet(pl.LightningModule):
                 #  channels=(16, 32, 64, 128, 256),
                 #  strides=(2, 2, 2, 2),
                  unet_config,
+                 max_epochs=1000,
                  dice=True,
                  bce=True,
                  ckpt_path=None,
@@ -71,6 +72,7 @@ class Unet(pl.LightningModule):
         self.dice = dice
         self.bce = bce
         self.image_scale_01 = image_scale_01
+        self.max_epochs = max_epochs
         if self.dice:
             self.dice_loss = DiceLoss(sigmoid=True)  # sigmoid=True for binary label
         else:
@@ -89,7 +91,15 @@ class Unet(pl.LightningModule):
     def configure_optimizers(self):
         lr = self.learning_rate
         optimizer = torch.optim.Adam(self.unet.parameters(), lr=lr)
-        return optimizer
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda x: 1.0 - x / self.max_epochs)
+        return {
+            'optimizer': optimizer,
+            'lr_scheduler': {
+                'scheduler': scheduler,
+                'interval': 'epoch',
+                'frequency': 1,
+            }
+        }
     def forward(self, x):
         if self.image_scale_01:
             x = (x + 1) / 2
@@ -104,12 +114,14 @@ class Unet(pl.LightningModule):
         loss = 0
         if self.dice:
             dice_loss = self.dice_loss(outputs, masks)
-            self.log('dice_loss', dice_loss)
+            self.log('dice_loss', dice_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         if self.bce:
             bce_loss = self.bce_loss(outputs, masks)
-            self.log('bce_loss', bce_loss)
+            self.log('bce_loss', bce_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         loss = dice_loss + bce_loss
-        self.log('train_loss', loss)
+        self.log('train_loss', loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
+        lr = self.optimizers().param_groups[0]['lr']
+        self.log('lr', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -122,9 +134,9 @@ class Unet(pl.LightningModule):
         dice_loss = self.dice_loss(outputs, masks)
         bce_loss = self.bce_loss(outputs, masks)
         loss = dice_loss + bce_loss
-        self.log('dice_loss', dice_loss)
-        self.log('bce_loss', bce_loss)
-        self.log('val_loss', loss)
+        self.log('dice_loss', dice_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+        self.log('bce_loss', bce_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+        self.log('val_loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         return loss
 
     @torch.no_grad()

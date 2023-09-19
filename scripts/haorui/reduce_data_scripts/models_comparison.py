@@ -183,52 +183,57 @@ def dice_compare(models, image_list, mask_list, opt):
     recall_metric = ConfusionMatrixMetric(include_background=True, metric_name="recall", reduction="mean")
     # confusion_matrix_metric = ConfusionMatrixMetric(include_background=True, metric_name="all", reduction="mean")
     
-    with ThreadPoolExecutor(max_workers=16) as executor:
-        for idx, model in enumerate(models):
-            model.eval()
-            dice_metric.reset()
-            miou_metric.reset()
+
+    for idx, model in enumerate(models):
+        model.eval()
+        dice_metric.reset()
+        miou_metric.reset()
+        
+        for item in tqdm(range(0, len(image_list), opt.batch_size)):
+            # batches = []
+            # future_to_index = {executor.submit(load_single_batch, item + i, image_list, mask_list, False, opt): i
+            #                     for i in range(opt.batch_size)}
+            # for future in concurrent.futures.as_completed(future_to_index):
+            #     batches.append(future.result())
+
+            batches = []
+            for i in range(opt.batch_size):
+                batches.append(load_single_batch(item + i, image_list, mask_list, False, opt))
+            batch = dict()
+            for key in batches[0].keys():
+                batch[key] = torch.cat([b[key] for b in batches], dim=0) if isinstance(batches[0][key], torch.Tensor) \
+                    else [b[key] for b in batches]
+
+            input_image = batch['image']
+            mask = batch['mask']
+            mask = (mask + 1) / 2  # convert to 0-1
+            mask = mask.to(torch.int32)
+            pred = model(input_image)
+            pred[pred > 0] = 1
+            pred[pred <= 0] = 0
+            pred = pred.to(torch.int32)
+
+            dice_val = dice_metric(y_pred=pred, y=mask)
+            miou_val = miou_metric(y_pred=pred, y=mask)
+            precision_val = precision_metric(y_pred=pred, y=mask)  # [tp, fp, tn, fn]
+            recall_val = recall_metric(y_pred=pred, y=mask)  # [tp, fp, tn, fn]
             
-            for item in tqdm(range(0, len(image_list), opt.batch_size)):
-                future_to_index = {executor.submit(load_single_batch, item + i, image_list, mask_list, False, opt): i
-                                   for i in range(opt.batch_size)}
-                batches = []
-                for future in concurrent.futures.as_completed(future_to_index):
-                    batches.append(future.result())
-                batch = dict()
-                for key in batches[0].keys():
-                    batch[key] = torch.cat([b[key] for b in batches], dim=0) if isinstance(batches[0][key], torch.Tensor) \
-                        else [b[key] for b in batches]
+            # save and compare predicted results and masks
+            pred = pred.cpu().numpy().transpose(0, 2, 3, 1) * 255.0
+            pred = pred.astype(np.uint8)
+            mask = mask.cpu().numpy().transpose(0, 2, 3, 1) * 255.0
+            mask = mask.astype(np.uint8)
+            for i in range(len(input_image)):  # for each result in the batch
+                combined = np.concatenate([(input_image[i].cpu().numpy().transpose(1, 2, 0) + 1) / 2 * 255.0,
+                                            mask[i].repeat(3, axis=2),
+                                            pred[i].repeat(3, axis=2)], axis=1).astype(np.uint8)
+                save_image_with_suffix(combined, os.path.join(opt.outdir, 'combined', str(idx)), 
+                                       f"{os.path.splitext(os.path.basename(batch['image_path'][i]))[0]}_dice_{dice_val[i].item():.4f}_miou_{miou_val[i].item():.4f}_precision_{(precision_val[i][0][0] / (precision_val[i][0][0] + precision_val[i][0][1])).item():.4f}_recall_{(recall_val[i][0][0] / (recall_val[i][0][0] + recall_val[i][0][3])).item():.4f}.png")
 
-                input_image = batch['image']
-                mask = batch['mask']
-                mask = (mask + 1) / 2  # convert to 0-1
-                mask = mask.to(torch.int32)
-                pred = model(input_image)
-                pred[pred > 0] = 1
-                pred[pred <= 0] = 0
-                pred = pred.to(torch.int32)
-
-                dice_metric(y_pred=pred, y=mask)
-                miou_metric(y_pred=pred, y=mask)
-                precision_metric(y_pred=pred, y=mask)
-                recall_metric(y_pred=pred, y=mask)
-                
-                # save and compare predicted results and masks
-                pred = pred.cpu().numpy().transpose(0, 2, 3, 1) * 255.0
-                pred = pred.astype(np.uint8)
-                mask = mask.cpu().numpy().transpose(0, 2, 3, 1) * 255.0
-                mask = mask.astype(np.uint8)
-                for i in range(len(input_image)):  # for each result in the batch
-                    combined = np.concatenate([(input_image[i].cpu().numpy().transpose(1, 2, 0) + 1) / 2 * 255.0,
-                                               pred[i].repeat(3, axis=2),
-                                               mask[i].repeat(3, axis=2)], axis=1).astype(np.uint8)
-                    save_image_with_suffix(combined, os.path.join(opt.outdir, 'combined', str(idx)), os.path.basename(batch['image_path'][i]))
-
-            dice_res.append(dice_metric.aggregate()[0].item())
-            precision_res.append(precision_metric.aggregate()[0].item())
-            recall_res.append(recall_metric.aggregate()[0].item())
-            IoU_res.append(miou_metric.aggregate().item())
+        dice_res.append(dice_metric.aggregate()[0].item())
+        precision_res.append(precision_metric.aggregate()[0].item())
+        recall_res.append(recall_metric.aggregate()[0].item())
+        IoU_res.append(miou_metric.aggregate().item())
     with open(os.path.join(opt.outdir, 'results.txt'), 'w') as f:
         f.write('dice:\n')
         for i in range(len(models)):
