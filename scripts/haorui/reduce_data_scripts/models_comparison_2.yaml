@@ -368,10 +368,10 @@ models:
 
 
   # unet trained with different set of 10 images
-  # - model: *unet_model
-  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/shuffle_10_configs/2023-09-05T19-46-07_train_unet_shuffle10_01/checkpoints/last.ckpt
-  # - model: *unet_model
-  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/shuffle_10_configs/2023-09-05T19-46-12_train_unet_shuffle10_02/checkpoints/last.ckpt
+  - model: *unet_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/shuffle_10_configs/2023-09-05T19-46-07_train_unet_shuffle10_01/checkpoints/last.ckpt
+  - model: *unet_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/shuffle_10_configs/2023-09-05T19-46-12_train_unet_shuffle10_02/checkpoints/last.ckpt
   # - model: *unet_model
   #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/shuffle_10_configs/2023-09-05T19-46-17_train_unet_shuffle10_03/checkpoints/last.ckpt
   # - model: *unet_model
@@ -421,4 +421,4 @@ models:
   - model: *resunetpp_ldm_model
     ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-14T16-24-47_train_resunetpp_onthefly_20/checkpoints/epoch=000399.ckpt
   - model: *resunetpp_ldm_model
-    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-14T16-24-42_train_resunetpp_onthefly_10/checkpoints/epoch=000389.ckpt
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-14T16-24-42_train_resunetpp_onthefly_10/checkpoints/epoch=000399.ckpt
