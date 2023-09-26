@@ -13,10 +13,12 @@ from PIL import Image
 from tqdm import tqdm
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 # from torchmetrics import Dice, Recall, Precision, JaccardIndex
 from monai.metrics import DiceMetric, ConfusionMatrixMetric, MeanIoU
 from main import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
+from data.haorui.CVC_Clinic import CVC_Clinic_Reconstruction
 # import matplotlib.pyplot as plt
 
 from util.gen_polyp_utils import reshape_mask, load_batch
@@ -168,13 +170,13 @@ def gen_samples(models, samplers, image_list, mask_list, opt, nums=None, random_
 
 @torch.no_grad()
 def dice_compare(models, image_list, mask_list, opt):
-    def load_single_batch(index, image_list, mask_list, random_image, opt):
-        if random_image:
-            return load_batch(image_list, mask_list, np.random.randint(len(image_list)), opt.mask_shuffle,
-                              opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
-        else:
-            return load_batch(image_list, mask_list, min(index, len(image_list) - 1), opt.mask_shuffle,
-                              opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
+    # def load_single_batch(index, image_list, mask_list, random_image, opt):
+    #     if random_image:
+    #         return load_batch(image_list, mask_list, np.random.randint(len(image_list)), opt.mask_shuffle,
+    #                           opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
+    #     else:
+    #         return load_batch(image_list, mask_list, min(index, len(image_list) - 1), opt.mask_shuffle,
+    #                           opt.random_resize_mask, opt.random_crop_mask, opt.random_crop_image)
 
     dice_res, precision_res, recall_res, IoU_res = [], [], [], []
     dice_metric = DiceMetric(include_background=True, reduction="mean")
@@ -188,24 +190,12 @@ def dice_compare(models, image_list, mask_list, opt):
         model.eval()
         dice_metric.reset()
         miou_metric.reset()
-        
-        for item in tqdm(range(0, len(image_list), opt.batch_size)):
-            # batches = []
-            # future_to_index = {executor.submit(load_single_batch, item + i, image_list, mask_list, False, opt): i
-            #                     for i in range(opt.batch_size)}
-            # for future in concurrent.futures.as_completed(future_to_index):
-            #     batches.append(future.result())
+        dataset = CVC_Clinic_Reconstruction(opt.image_path, opt.mask_path, transpose=True)
+        dataloader = DataLoader(dataset, batch_size=opt.batch_size, shuffle=False, num_workers=4, drop_last=False)
+        for batch in tqdm(dataloader):
 
-            batches = []
-            for i in range(opt.batch_size):
-                batches.append(load_single_batch(item + i, image_list, mask_list, False, opt))
-            batch = dict()
-            for key in batches[0].keys():
-                batch[key] = torch.cat([b[key] for b in batches], dim=0) if isinstance(batches[0][key], torch.Tensor) \
-                    else [b[key] for b in batches]
-
-            input_image = batch['image']
-            mask = batch['mask']
+            input_image = batch['image'].cuda()
+            mask = batch['mask'].cuda()
             mask = (mask + 1) / 2  # convert to 0-1
             mask = mask.to(torch.int32)
             pred = model(input_image)

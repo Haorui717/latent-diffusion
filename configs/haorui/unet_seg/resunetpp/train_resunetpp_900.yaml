@@ -7,6 +7,7 @@ model:
       params:
         channel: 3
     image_scale_01: True
+    max_epochs: 2500
 
 data:
   target: main.DataModuleFromConfig
@@ -39,4 +40,4 @@ lightning:
 
   trainer:
     benchmark: True
-    max_epochs: 1000
+    max_epochs: 2500

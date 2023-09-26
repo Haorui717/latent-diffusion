@@ -163,26 +163,18 @@ class Unet_ldm(pl.LightningModule):
     '''
     Unet with latent diffusion model which synthesize polyps on the fly.
     '''
-    def __init__(self, unet_config, ldm_config=None, sampler_steps=40,
-                #  in_channels=3,
-                #  out_channels=1,
-                #  image_size=(256, 256),
-                #  channels=(16, 32, 64, 128, 256),
-                #  strides=(2, 2, 2, 2),
+    def __init__(self, unet_config,
+                 ldm_config=None, 
                  dice=True,
                  bce=True,
                  ckpt_path=None,
-                 image_scale_01=False
+                 image_scale_01=False,
+                 sampler_steps=40,
+                 max_epochs=1000,
                  ) -> None:
         super().__init__()
-        # self.unet = monai_nets.UNet(
-        #     spatial_dims=2,
-        #     in_channels=in_channels,
-        #     out_channels=out_channels,
-        #     channels=channels,
-        #     strides=strides,
-        # )
         self.image_scale_01 = image_scale_01
+        self.max_epochs = max_epochs
         self.unet = instantiate_from_config(unet_config)
         self.dice = dice
         self.bce = bce
@@ -212,7 +204,15 @@ class Unet_ldm(pl.LightningModule):
     def configure_optimizers(self):
         lr = self.learning_rate
         optimizer = torch.optim.Adam(self.unet.parameters(), lr=lr)
-        return optimizer
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda x: 1.0 - x / self.max_epochs)
+        return {
+            'optimizer': optimizer,
+            'lr_scheduler': {
+                'scheduler': scheduler,
+                'interval': 'epoch',
+                'frequency': 1,
+            }
+        }
     
     def forward(self, x):  # only pass the unet
         if self.image_scale_01:
@@ -247,12 +247,14 @@ class Unet_ldm(pl.LightningModule):
         loss = 0
         if self.dice:
             dice_loss = self.dice_loss(outputs, masks)
-            self.log('dice_loss', dice_loss)
+            self.log('dice_loss', dice_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         if self.bce:
             bce_loss = self.bce_loss(outputs, masks)
-            self.log('bce_loss', bce_loss)
+            self.log('bce_loss', bce_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         loss = dice_loss + bce_loss
-        self.log('train_loss', loss)
+        self.log('train_loss', loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
+        lr = self.optimizers().param_groups[0]['lr']
+        self.log('lr', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -264,12 +266,12 @@ class Unet_ldm(pl.LightningModule):
         loss = 0
         if self.dice:
             dice_loss = self.dice_loss(outputs, masks)
-            self.log('dice_loss', dice_loss)
+            self.log('dice_loss', dice_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         if self.bce:
             bce_loss = self.bce_loss(outputs, masks)
-            self.log('bce_loss', bce_loss)
+            self.log('bce_loss', bce_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         loss = dice_loss + bce_loss
-        self.log('val_loss', loss)
+        self.log('val_loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         return loss
 
     @torch.no_grad()

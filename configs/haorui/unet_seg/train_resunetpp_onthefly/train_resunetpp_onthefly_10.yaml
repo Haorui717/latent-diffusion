@@ -75,6 +75,8 @@ model:
       target: ldm.haorui.resunet.resunetpp.ResUnetPlusPlus
       params:
         channel: 3
+    sampler_steps: 40
+    max_epochs: 1000
     image_scale_01: True
 
 data:
@@ -110,4 +112,4 @@ lightning:
 
   trainer:
     benchmark: True
-    max_epochs: 400
+    max_epochs: 1000

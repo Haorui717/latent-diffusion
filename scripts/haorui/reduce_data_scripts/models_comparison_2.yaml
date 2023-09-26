@@ -420,9 +420,15 @@ models:
     ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/resunetpp/reproduce/2023-09-19T00-40-34_reproduce_resunetpp_1/checkpoints/last.ckpt
 
   # resunetpp_ldm
-  # - model: *resunetpp_ldm_model
-  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-14T16-24-52_train_resunetpp_onthefly_900/checkpoints/epoch=000399.ckpt
-  # - model: *resunetpp_ldm_model
-  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-14T16-24-47_train_resunetpp_onthefly_20/checkpoints/epoch=000399.ckpt
-  # - model: *resunetpp_ldm_model
-  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-14T16-24-42_train_resunetpp_onthefly_10/checkpoints/epoch=000399.ckpt
+  - model: *resunetpp_ldm_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-14T16-24-52_train_resunetpp_onthefly_900/checkpoints/epoch=000399.ckpt
+  - model: *resunetpp_ldm_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-14T16-24-47_train_resunetpp_onthefly_20/checkpoints/epoch=000399.ckpt
+  - model: *resunetpp_ldm_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-14T16-24-42_train_resunetpp_onthefly_10/checkpoints/epoch=000399.ckpt
+  - model: *resunetpp_ldm_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-24T17-10-01_train_resunetpp_onthefly_900/checkpoints/last.ckpt
+  - model: *resunetpp_ldm_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-24T17-09-56_train_resunetpp_onthefly_20/checkpoints/last.ckpt
+  - model: *resunetpp_ldm_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-24T17-09-51_train_resunetpp_onthefly_10/checkpoints/last.ckpt
