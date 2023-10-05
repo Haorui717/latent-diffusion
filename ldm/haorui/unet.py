@@ -247,10 +247,10 @@ class Unet_ldm(pl.LightningModule):
         loss = 0
         if self.dice:
             dice_loss = self.dice_loss(outputs, masks)
-            self.log('dice_loss', dice_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
+            self.log('train_dice_loss', dice_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         if self.bce:
             bce_loss = self.bce_loss(outputs, masks)
-            self.log('bce_loss', bce_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
+            self.log('train_bce_loss', bce_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         loss = dice_loss + bce_loss
         self.log('train_loss', loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         lr = self.optimizers().param_groups[0]['lr']
@@ -266,10 +266,10 @@ class Unet_ldm(pl.LightningModule):
         loss = 0
         if self.dice:
             dice_loss = self.dice_loss(outputs, masks)
-            self.log('dice_loss', dice_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+            self.log('val_dice_loss', dice_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         if self.bce:
             bce_loss = self.bce_loss(outputs, masks)
-            self.log('bce_loss', bce_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+            self.log('val_bce_loss', bce_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         loss = dice_loss + bce_loss
         self.log('val_loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         return loss

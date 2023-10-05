@@ -4,3 +4,4 @@ nohup_log
 ./__pycache__
 *.ipynb_checkpoints
 *.pyc
+tmux_log

@@ -1,6 +1,8 @@
 import torch
+import numpy as np
 import pytorch_lightning as pl
 import torch.nn.functional as F
+from torch.optim.lr_scheduler import LambdaLR
 from contextlib import contextmanager
 from packaging import version
 
@@ -153,14 +155,14 @@ class VQModel(pl.LightningModule):
                                             last_layer=self.get_last_layer(), split="train",
                                             predicted_indices=ind)
 
-            self.log_dict(log_dict_ae, prog_bar=False, logger=True, on_step=True, on_epoch=True)
+            self.log_dict(log_dict_ae, prog_bar=True, logger=True, on_step=True, on_epoch=True)
             return aeloss
 
         if optimizer_idx == 1:
             # discriminator
             discloss, log_dict_disc = self.loss(qloss, x, xrec, optimizer_idx, self.global_step,
                                             last_layer=self.get_last_layer(), split="train")
-            self.log_dict(log_dict_disc, prog_bar=False, logger=True, on_step=True, on_epoch=True)
+            self.log_dict(log_dict_disc, prog_bar=True, logger=True, on_step=True, on_epoch=True)
             return discloss
 
     def validation_step(self, batch, batch_idx):

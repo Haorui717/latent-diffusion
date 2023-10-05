@@ -52,25 +52,6 @@ def separate_train_val(image_path, val_num, mask_path=None):
         val_images.sort()
         return train_images, val_images
 
-def merge_images(source_dirs, dst_dir):
-    from scripts.haorui.reduce_data_scripts.models_comparison import save_image_with_suffix
-    for source_dir in source_dirs:
-        all_images = load_filepaths(source_dir)
-        all_images.sort()
-        for image_name in tqdm(all_images, total=len(all_images)):
-            image = np.array(Image.open(image_name))
-            save_image_with_suffix(image, dst_dir, image_name.split('/')[-1])
-
-def merge_image_concurrent(source_dirs, dst_dir):
-    from scripts.haorui.reduce_data_scripts.models_comparison import save_image_with_suffix
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        for source_dir in source_dirs:
-            all_images = load_filepaths(source_dir)
-            all_images.sort()
-            for image_name in tqdm(all_images, total=len(all_images)):
-                image = np.array(Image.open(image_name))
-                executor.submit(save_image_with_suffix, image, dst_dir, image_name.split('/')[-1])
-
 def check_image_mask_pair(image_list, mask_list):
     # check if the image and mask are paired
     image_list.sort()
@@ -100,94 +81,85 @@ def rename_images(dir):
     
 
 #%%
-# write the file names into different txt files
-# dirs_list contains a list of dirs, each element is a list of dirs for one txt file
-if __name__ == '__main__':
-    dirs_list = [
-        # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/0/boxed_images'],
-        # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/1/boxed_images'],
-        # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/2/boxed_images'],
-        # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/3/boxed_images'],
-        # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/4/boxed_images'],
-        # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/5/boxed_images'],
-        # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/6/boxed_images'],
-        # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/7/boxed_images'],
-        # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/8/boxed_images'],
-        # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/mask']
-        # ['/home/zongwei/haorui/ccvl15/haorui/datasets/polyp_bounding_box/PolyGen/boxed_images']
-        # ['/home/zongwei/haorui/ccvl15/haorui/datasets/__2023-08-10T15-00-25_synthetic_polyps_10images/0']
-        # ['/home/zongwei/haorui/ccvl15/haorui/datasets/__2023-08-11synthesized_polyps_merged/images'],
-        # ['/home/zongwei/haorui/ccvl15/haorui/datasets/__2023-08-11synthesized_polyps_merged/masks']
-        # ['/home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Laptop/latent-diffusion/outputs/gen_samples/2023-08-16T14-04-18/0'],
-        # ['/home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Laptop/latent-diffusion/outputs/gen_samples/2023-08-16T14-04-18/mask']
-        # [
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/Kvasir-SEG/masks',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C1/masks_C1',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C2/masks_C2',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C3/masks_C3',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C4/masks_C4',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C5/masks_C5',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C6/masks_C6',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq1/masks_seq1',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq2/masks_seq2',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq3/masks_seq3',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq4/masks_seq4',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq5/masks_seq5',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq6/masks_seq6',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq7/masks_seq7',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq8/masks_seq8',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq9/masks_seq9',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq10/masks_seq10',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq11/masks_seq11',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq12/masks_seq12',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq13/masks_seq13',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq14/masks_seq14',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq15/masks_seq15',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq16/masks_seq16',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq17/masks_seq17',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq18/masks_seq18',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq19/masks_seq19',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq20/masks_seq20',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq21/masks_seq21',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq22/masks_seq22',
-        # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq23/masks_seq23',],
-        ['/home/yixiao/haorui/ccvl15/haorui/datasets/CVC-ColonDB/images'],
-        ['/home/yixiao/haorui/ccvl15/haorui/datasets/CVC-ColonDB/masks']
-    ]
-
-    for dirs in dirs_list:
-        save_path = dirs[0].split('/')[-1] + '.txt'
-        save_filepaths(dirs, save_path)
-
-#%%
-
+# # write the file names into different txt files
+# # dirs_list contains a list of dirs, each element is a list of dirs for one txt file
 # if __name__ == '__main__':
-#     source_dirs = [
-#         '/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-10T21-39-48/mask',
-#         '/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-10T20-26-42/mask',
-#         '/home/zongwei/haorui/ccvl15/haorui/datasets/__2023-08-10T15-00-25_synthetic_polyps_10images/mask'
+#     dirs_list = [
+#         # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/0/boxed_images'],
+#         # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/1/boxed_images'],
+#         # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/2/boxed_images'],
+#         # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/3/boxed_images'],
+#         # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/4/boxed_images'],
+#         # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/5/boxed_images'],
+#         # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/6/boxed_images'],
+#         # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/7/boxed_images'],
+#         # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/boxed_image/8/boxed_images'],
+#         # ['/home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/outputs/reduce_data/gen_samples/2023-08-07T14-07-15/mask']
+#         # ['/home/zongwei/haorui/ccvl15/haorui/datasets/polyp_bounding_box/PolyGen/boxed_images']
+#         # ['/home/zongwei/haorui/ccvl15/haorui/datasets/__2023-08-10T15-00-25_synthetic_polyps_10images/0']
+#         # ['/home/zongwei/haorui/ccvl15/haorui/datasets/__2023-08-11synthesized_polyps_merged/images'],
+#         # ['/home/zongwei/haorui/ccvl15/haorui/datasets/__2023-08-11synthesized_polyps_merged/masks']
+#         # ['/home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Laptop/latent-diffusion/outputs/gen_samples/2023-08-16T14-04-18/0'],
+#         # ['/home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Laptop/latent-diffusion/outputs/gen_samples/2023-08-16T14-04-18/mask']
+#         [
+#         # '/home/yixiao/haorui/ccvl15/haorui/datasets/Kvasir-SEG/masks',
+#         # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C1/images_C1',
+#         # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C2/images_C2',
+#         # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C3/images_C3',
+#         # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C4/images_C4',
+#         # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C5/images_C5',
+#         # '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/data_C6/images_C6',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq1/images_seq1',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq2/images_seq2',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq3/images_seq3',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq4/images_seq4',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq5/images_seq5',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq6/images_seq6',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq7/images_seq7',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq8/images_seq8',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq9/images_seq9',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq10/images_seq10',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq11/images_seq11',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq12/images_seq12',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq13/images_seq13',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq14/images_seq14',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq15/images_seq15',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq16/images_seq16',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq17/images_seq17',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq18/images_seq18',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq19/images_seq19',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq20/images_seq20',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq21/images_seq21',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq22/images_seq22',
+#         '/home/yixiao/haorui/ccvl15/haorui/datasets/PolypGen2021_MultiCenterData_v3/sequenceData/positive/seq23/images_seq23',
+#         ],
+#         # ['/home/yixiao/haorui/ccvl15/haorui/datasets/CVC-ColonDB/images'],
+#         # ['/home/yixiao/haorui/ccvl15/haorui/datasets/CVC-ColonDB/masks']
 #     ]
-#     dst_dir = '/home/zongwei/haorui/ccvl15/haorui/datasets/__2023-08-11synthesized_polyps_merged/masks'
-#     merge_images(source_dirs, dst_dir)
+
+#     for dirs in dirs_list:
+#         save_path = dirs[0].split('/')[-1] + '.txt'
+#         save_filepaths(dirs, save_path)
+
 
 #%%
-# # split train and val
-# if __name__ == "__main__":
-#     image_path = '/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/synthetic_merged/900_images/images.txt'
-#     mask_path = '/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/synthetic_merged/900_images/masks.txt'
-#     train_images, val_images, train_masks, val_masks = separate_train_val(image_path, 1000, mask_path)
-#     with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/synthetic_merged/900_images/train_images.txt', 'w') as f:
-#         for image in train_images:
-#             f.write(image + '\n')
-#     with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/synthetic_merged/900_images/val_images.txt', 'w') as f:
-#         for image in val_images:
-#             f.write(image + '\n')
-#     with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/synthetic_merged/900_images/train_masks.txt', 'w') as f:
-#         for mask in train_masks:
-#             f.write(mask + '\n')
-#     with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/synthetic_merged/900_images/val_masks.txt', 'w') as f:
-#         for mask in val_masks:
-#             f.write(mask + '\n')
+# split train and val
+if __name__ == "__main__":
+    image_path = '/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_images_except_test_all.txt'
+    mask_path = '/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_images_except_test_all.txt'
+    train_images, val_images, train_masks, val_masks = separate_train_val(image_path, 700, mask_path)
+    with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_images_except_test_train.txt', 'w') as f:
+        for image in train_images:
+            f.write(image + '\n')
+    with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_images_except_test_val.txt', 'w') as f:
+        for image in val_images:
+            f.write(image + '\n')
+    # with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_masks_train.txt', 'w') as f:
+    #     for mask in train_masks:
+    #         f.write(mask + '\n')
+    # with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_masks_train_500.txt', 'w') as f:
+    #     for mask in val_masks:
+    #         f.write(mask + '\n')
 
 #%%
 # # check if the image and mask are paired
