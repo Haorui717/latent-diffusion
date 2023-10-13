@@ -434,9 +434,25 @@ models:
   #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-09-24T17-09-51_train_resunetpp_onthefly_10/checkpoints/last.ckpt
 
   # resunetpp on PolypGEN
-  - model: *resunetpp_model
-    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/resunetpp/2023-09-27T23-55-28_train_resunetpp_1800/checkpoints/epoch=001999.ckpt
-  - model: *resunetpp_model
-    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/resunetpp/2023-09-27T23-55-33_train_resunetpp_1000/checkpoints/epoch=001999.ckpt
-  - model: *resunetpp_model
-    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/resunetpp/2023-09-27T23-55-38_train_resunetpp_500/checkpoints/epoch=001999.ckpt
+  # - model: *resunetpp_model
+  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/resunetpp/2023-09-27T23-55-28_train_resunetpp_1800/checkpoints/epoch=001999.ckpt
+  # - model: *resunetpp_model
+  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/resunetpp/2023-09-27T23-55-33_train_resunetpp_1000/checkpoints/epoch=001999.ckpt
+  # - model: *resunetpp_model
+  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/resunetpp/2023-09-27T23-55-38_train_resunetpp_500/checkpoints/epoch=001999.ckpt
+
+  # resunetpp_ldm on the fly on PolypGEN
+  # - model: *resunetpp_ldm_model
+  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-10-07T03-25-11_train_resunetpp_onthefly_1800/checkpoints/epoch=000711.ckpt
+  # - model: *resunetpp_ldm_model
+  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_onthefly/2023-10-07T03-25-12_train_resunetpp_onthefly_500/checkpoints/epoch=000559.ckpt
+  
+  # resunetpp_ldm on the fly replace
+  # - model: *resunetpp_ldm_model
+  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_replace/2023-10-09T01-42-25_train_resunetpp_replace_1800/checkpoints/epoch=000355.ckpt
+  # - model: *resunetpp_ldm_model
+  #   ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_replace/2023-10-09T01-42-25_train_resunetpp_replace_1800/checkpoints/epoch=000534.ckpt
+  - model: *resunetpp_ldm_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_replace/2023-10-09T01-42-25_train_resunetpp_replace_1800/checkpoints/epoch=000923.ckpt
+  - model: *resunetpp_ldm_model
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/segmentation/train_resunetpp_replace/2023-10-09T01-42-25_train_resunetpp_replace_1800/checkpoints/epoch=000862.ckpt

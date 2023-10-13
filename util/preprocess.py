@@ -145,13 +145,13 @@ def rename_images(dir):
 #%%
 # split train and val
 if __name__ == "__main__":
-    image_path = '/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_images_except_test_all.txt'
-    mask_path = '/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_images_except_test_all.txt'
-    train_images, val_images, train_masks, val_masks = separate_train_val(image_path, 700, mask_path)
-    with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_images_except_test_train.txt', 'w') as f:
+    image_path = '/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/PolypGEN/PolypGEN_n_empty_all_images.txt'
+    mask_path = '/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/PolypGEN/PolypGEN_n_empty_all_images.txt'
+    train_images, val_images, train_masks, val_masks = separate_train_val(image_path, 500, mask_path)
+    with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/PolypGEN/PolypGEN_n_empty_train_images.txt', 'w') as f:
         for image in train_images:
             f.write(image + '\n')
-    with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_images_except_test_val.txt', 'w') as f:
+    with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/PolypGEN/PolypGEN_n_empty_val_images.txt', 'w') as f:
         for image in val_images:
             f.write(image + '\n')
     # with open('/home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_masks_train.txt', 'w') as f:

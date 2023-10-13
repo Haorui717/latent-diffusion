@@ -77,4 +77,5 @@ class Random_Mask_Dataset(Dataset):
             batch['image'] = image
             batch['mask'] = mask
             batch['masked_image'] = masked_image
+        batch['image_path'] = image_path
         return batch

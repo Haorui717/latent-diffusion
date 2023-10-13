@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 
 class CVC_Clinic_Reconstruction(Dataset):
     # dataset for loading CVC_Clinic image and mask
-    def __init__(self, image_path, mask_path, size=256, transpose=False):
+    def __init__(self, image_path, mask_path, size=256, transpose=False, random_crop=True):
         # read image path and file path into list. Each line of image_path and mask_path is a path to an image or mask
         self.image_list = []
         self.mask_list = []
@@ -28,6 +28,7 @@ class CVC_Clinic_Reconstruction(Dataset):
         self.max_crop_f = 1.0  # max crop factor
         self.image_rescaler = albumentations.SmallestMaxSize(max_size=size, interpolation=cv2.INTER_AREA)
         self.transpose = transpose
+        self.random_crop = random_crop
 
     def __len__(self):
         return len(self.image_list)
@@ -41,11 +42,18 @@ class CVC_Clinic_Reconstruction(Dataset):
 
         # randomly crop image and mask at the same relative location
         min_side_len = min(image.shape[:2])
-        crop_side_len = min_side_len * np.random.uniform(self.min_crop_f, self.max_crop_f, size=None)
+        if self.random_crop:
+            crop_side_len = min_side_len * np.random.uniform(self.min_crop_f, self.max_crop_f, size=None)
+        else:
+            crop_side_len = min_side_len
         crop_side_len = int(crop_side_len)
         h, w = image.shape[:2]
-        top = np.random.randint(0, h - crop_side_len)
-        left = np.random.randint(0, w - crop_side_len)
+        if self.random_crop:
+            top = np.random.randint(0, h - crop_side_len)
+            left = np.random.randint(0, w - crop_side_len)
+        else:
+            top = (h - crop_side_len) // 2
+            left = (w - crop_side_len) // 2
         image = image[top:top + crop_side_len, left:left + crop_side_len]
         mask = mask[top:top + crop_side_len, left:left + crop_side_len]
 

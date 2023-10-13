@@ -164,15 +164,19 @@ class Unet_ldm(pl.LightningModule):
     Unet with latent diffusion model which synthesize polyps on the fly.
     '''
     def __init__(self, unet_config,
-                 ldm_config=None, 
+                 ldm_config=None,
+                 scheduler_config=None,
                  dice=True,
                  bce=True,
                  ckpt_path=None,
                  image_scale_01=False,
-                 sampler_steps=40,
+                 sampler_steps=50,
                  max_epochs=1000,
+                 monitor=None,
                  ) -> None:
         super().__init__()
+        if monitor is not None:
+            self.monitor = monitor
         self.image_scale_01 = image_scale_01
         self.max_epochs = max_epochs
         self.unet = instantiate_from_config(unet_config)
@@ -186,6 +190,10 @@ class Unet_ldm(pl.LightningModule):
             self.bce_loss = torch.nn.BCEWithLogitsLoss()
         else:
             self.bce_loss = None
+        
+        self.use_scheduler = scheduler_config is not None
+        if self.use_scheduler:
+            self.scheduler_config = scheduler_config
 
         self.ldm_config = ldm_config
         self.ldm = instantiate_from_config(self.ldm_config)
@@ -203,16 +211,21 @@ class Unet_ldm(pl.LightningModule):
 
     def configure_optimizers(self):
         lr = self.learning_rate
-        optimizer = torch.optim.Adam(self.unet.parameters(), lr=lr)
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda x: 1.0 - x / self.max_epochs)
-        return {
-            'optimizer': optimizer,
-            'lr_scheduler': {
-                'scheduler': scheduler,
-                'interval': 'epoch',
-                'frequency': 1,
+        optimizer = torch.optim.AdamW(self.unet.parameters(), lr=lr)
+
+        if self.use_scheduler:
+            assert 'target' in self.scheduler_config
+            scheduler = instantiate_from_config(self.scheduler_config)
+            scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=scheduler.schedule)
+            return {
+                'optimizer': optimizer,
+                'lr_scheduler': {
+                    'scheduler': scheduler,
+                    'interval': 'epoch',
+                    'frequency': 1,
+                }
             }
-        }
+        return optimizer
     
     def forward(self, x):  # only pass the unet
         if self.image_scale_01:
@@ -254,7 +267,7 @@ class Unet_ldm(pl.LightningModule):
         loss = dice_loss + bce_loss
         self.log('train_loss', loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         lr = self.optimizers().param_groups[0]['lr']
-        self.log('lr', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
+        self.log('lr', lr, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -266,10 +279,10 @@ class Unet_ldm(pl.LightningModule):
         loss = 0
         if self.dice:
             dice_loss = self.dice_loss(outputs, masks)
-            self.log('val_dice_loss', dice_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
+            self.log('val_dice_loss', dice_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         if self.bce:
             bce_loss = self.bce_loss(outputs, masks)
-            self.log('val_bce_loss', bce_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
+            self.log('val_bce_loss', bce_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         loss = dice_loss + bce_loss
         self.log('val_loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
         return loss

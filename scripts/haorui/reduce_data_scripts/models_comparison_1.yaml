@@ -88,21 +88,30 @@ models:
 #  - model: *ldm_model
 #    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-07-27T23-47-41_ldm_polyp/2023-07-27T23-47-41_ldm_polyp_900/checkpoints/epoch=000267.ckpt
 
+  # - model: *ldm_model
+  #   ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-08-14_ldm_polyp_10/checkpoints/epoch=000125.ckpt
+  # - model: *ldm_model
+  #   ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-08-09_ldm_polyp_20/checkpoints/epoch=000213.ckpt
+  # - model: *ldm_model
+  #   ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-08-04_ldm_polyp_30/checkpoints/epoch=000193.ckpt
+  # - model: *ldm_model
+  #   ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-07-59_ldm_polyp_40/checkpoints/epoch=000197.ckpt
+  # - model: *ldm_model
+  #   ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-07-54_ldm_polyp_50/checkpoints/epoch=000197.ckpt
+  # - model: *ldm_model
+  #   ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-07-49_ldm_polyp_60/checkpoints/epoch=000190.ckpt
+  # - model: *ldm_model
+  #   ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-07-44_ldm_polyp_70/checkpoints/epoch=000219.ckpt
+  # - model: *ldm_model
+  #   ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-07-39_ldm_polyp_80/checkpoints/epoch=000199.ckpt
+  # - model: *ldm_model
+  #   ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-07-35_ldm_polyp_90/checkpoints/epoch=000193.ckpt
+
   - model: *ldm_model
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-08-14_ldm_polyp_10/checkpoints/epoch=000125.ckpt
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/ldm_polyp/2023-10-05T18-20-34_ldm_polyp_1800/checkpoints/epoch=000964.ckpt
   - model: *ldm_model
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-08-09_ldm_polyp_20/checkpoints/epoch=000213.ckpt
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/ldm_polyp/2023-10-05T18-20-34_ldm_polyp_1800/checkpoints/epoch=000964.ckpt
   - model: *ldm_model
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-08-04_ldm_polyp_30/checkpoints/epoch=000193.ckpt
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/ldm_polyp/2023-10-05T18-20-35_ldm_polyp_500/checkpoints/epoch=001954.ckpt
   - model: *ldm_model
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-07-59_ldm_polyp_40/checkpoints/epoch=000197.ckpt
-  - model: *ldm_model
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-07-54_ldm_polyp_50/checkpoints/epoch=000197.ckpt
-  - model: *ldm_model
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-07-49_ldm_polyp_60/checkpoints/epoch=000190.ckpt
-  - model: *ldm_model
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-07-44_ldm_polyp_70/checkpoints/epoch=000219.ckpt
-  - model: *ldm_model
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-07-39_ldm_polyp_80/checkpoints/epoch=000199.ckpt
-  - model: *ldm_model
-    ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/reduce_data_logs/2023-08-04T01-07-35_ldm_polyp_10-90/2023-08-04T01-07-35_ldm_polyp_90/checkpoints/epoch=000193.ckpt
+    ckpt_path: /home/yixiao/haorui/ccvl15/haorui/latent-diffusion-Local/logs/ldm_polyp/2023-10-05T18-20-35_ldm_polyp_500/checkpoints/epoch=001954.ckpt
