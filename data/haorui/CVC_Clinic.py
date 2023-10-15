@@ -8,11 +8,12 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 class CVC_Clinic_Reconstruction(Dataset):
-    # dataset for loading CVC_Clinic image and mask
-    def __init__(self, image_path, mask_path, size=256, transpose=False, random_crop=True):
+    # dataset for loading image and mask
+    def __init__(self, image_path, mask_path, size=256, transpose=False, random_crop=True, negative_image_path=None):
         # read image path and file path into list. Each line of image_path and mask_path is a path to an image or mask
         self.image_list = []
         self.mask_list = []
+        self.negative_image_list = []
         with open(image_path, 'r') as f:
             for line in f:
                 self.image_list.append(line.strip())
@@ -20,9 +21,15 @@ class CVC_Clinic_Reconstruction(Dataset):
             for line in f:
                 self.mask_list.append(line.strip())
 
+        if negative_image_path is not None:
+            with open(negative_image_path, 'r') as f:
+                for line in f:
+                    self.negative_image_list.append(line.strip())
+            self.negative_image_list.sort()
 
         self.image_list.sort()
         self.mask_list.sort()
+        self.image_list = self.image_list + self.negative_image_list
 
         self.min_crop_f = 0.5  # min crop factor
         self.max_crop_f = 1.0  # max crop factor
@@ -36,9 +43,12 @@ class CVC_Clinic_Reconstruction(Dataset):
     def __getitem__(self, item):
         # load image and mask with suffix jpg or png
         image = Image.open(self.image_list[item]).convert('RGB')
-        mask = Image.open(self.mask_list[item]).convert('L')
         image = np.array(image).astype(np.float32) / 255.0
-        mask = np.array(mask).astype(np.float32) / 255.0
+        if item < len(self.mask_list):
+            mask = Image.open(self.mask_list[item]).convert('L')
+            mask = np.array(mask).astype(np.float32) / 255.0
+        else:
+            mask = np.zeros_like(image)
 
         # randomly crop image and mask at the same relative location
         min_side_len = min(image.shape[:2])
@@ -93,5 +103,8 @@ class CVC_Clinic_Reconstruction(Dataset):
             batch['masked_image'] = masked_image
         batch['image_path'] = self.image_list[item]
         batch['mask_path'] = self.mask_list[item]
-
+        batch['condition'] = dict(
+            mask=batch['mask'],
+            masked_image=batch['masked_image']
+        )
         return batch

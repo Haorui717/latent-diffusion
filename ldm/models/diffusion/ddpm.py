@@ -327,12 +327,25 @@ class DDPM(pl.LightningModule):
         return self.p_losses(x, t, *args, **kwargs)
 
     def get_input(self, batch, k):
-        x = batch[k]
-        if len(x.shape) == 3:
-            x = x[..., None]
-        x = rearrange(x, 'b h w c -> b c h w')
-        x = x.to(memory_format=torch.contiguous_format).float()
-        return x
+        val = batch[k]
+        def transpose(x):
+            if not isinstance(x, torch.Tensor):
+                return x
+            if len(x.shape) == 3:
+                x = x[..., None]
+            x = rearrange(x, 'b h w c -> b c h w')
+            x = x.to(memory_format=torch.contiguous_format).float()
+            x = x.to(self.device)
+            return x
+        def apply_func(obj, func):
+            if isinstance(obj, list):
+                return [apply_func(elem, func) for elem in obj]
+            elif isinstance(obj, dict):
+                return {key: apply_func(value, func) for key, value in obj.items()}
+            else:
+                return func(obj)
+        val = apply_func(val, transpose)
+        return val
 
     def shared_step(self, batch):
         x = self.get_input(batch, self.first_stage_key)
@@ -653,6 +666,13 @@ class LatentDiffusion(DDPM):
     @torch.no_grad()
     def get_input(self, batch, k, return_first_stage_outputs=False, force_c_encode=False,
                   cond_key=None, return_original_cond=False, bs=None):
+        def apply_func(obj, func):
+            if isinstance(obj, list):
+                return [apply_func(elem, func) for elem in obj]
+            elif isinstance(obj, dict):
+                return {key: apply_func(value, func) for key, value in obj.items()}
+            else:
+                return func(obj)
         x = super().get_input(batch, k)
         x = x.to(self.device)
         encoder_posterior = self.encode_first_stage(x)
@@ -667,7 +687,7 @@ class LatentDiffusion(DDPM):
                 elif cond_key == 'class_label':
                     xc = batch
                 else:
-                    xc = super().get_input(batch, cond_key).to(self.device)
+                    xc = super().get_input(batch, cond_key)
             else:
                 xc = x
             if not self.cond_stage_trainable or force_c_encode:
@@ -690,10 +710,11 @@ class LatentDiffusion(DDPM):
             if self.use_positional_encodings:
                 pos_x, pos_y = self.compute_latent_shifts(batch)
                 c = {'pos_x': pos_x, 'pos_y': pos_y}
-        '''added by haorui. c concat with mask for image impainting'''
-        m = super().get_input(batch, 'mask').to(self.device)
-        m = torch.nn.functional.interpolate(m, size=c.shape[2:])
-        c = torch.cat([c, m], dim=1)
+        # '''added by haorui. c concat with mask for image impainting'''
+        # m = super().get_input(batch, 'mask').to(self.device)
+        # m = torch.nn.functional.interpolate(m, size=z.shape[2:])
+        # tmp = [c, m]
+        # c = torch.cat([i for i in tmp if i is not None], dim=1)
         out = [z, c]
         if return_first_stage_outputs:
             xrec = self.decode_first_stage(z)
@@ -701,7 +722,8 @@ class LatentDiffusion(DDPM):
         if return_original_cond:
             out.append(xc)
         if bs is not None:
-            out = [o[:bs] for o in out]
+            # out = [o[:bs] for o in out]
+            out = apply_func(out, lambda x: x[:bs])
         return out
 
     @torch.no_grad()
@@ -1282,6 +1304,10 @@ class LatentDiffusion(DDPM):
                 log['conditioning'] = xc
             if ismap(xc):
                 log["original_conditioning"] = self.to_rgb(xc)
+        
+        '''added by Haorui, overwrite conditioning'''
+        log['conditioning'] = batch['mask'][:N]
+        log['conditioning'] = log['conditioning'].transpose(1,3).transpose(2,3)
 
         if plot_diffusion_rows:
             # get diffusion row
@@ -1380,7 +1406,7 @@ class LatentDiffusion(DDPM):
             scheduler = [
                 {
                     'scheduler': LambdaLR(opt, lr_lambda=scheduler.schedule),
-                    'interval': 'epoch',
+                    'interval': 'step',
                     'frequency': 1
                 }]
             return [opt], scheduler
