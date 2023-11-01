@@ -26,6 +26,14 @@ from util.gen_polyp_utils import reshape_mask, load_batch
 
 image_rescaler = albumentations.SmallestMaxSize(max_size=256, interpolation=cv2.INTER_AREA)
 
+def apply_func(obj, func):
+            if isinstance(obj, list):
+                return [apply_func(elem, func) for elem in obj]
+            elif isinstance(obj, dict):
+                return {key: apply_func(value, func) for key, value in obj.items()}
+            else:
+                return func(obj)
+
 def save_image_with_suffix(image, dir, filename):
     # # if file exists, rename it with a suffix _1, _2, ...
     os.makedirs(dir, exist_ok=True)
@@ -109,8 +117,8 @@ def gen_samples(models, samplers, image_list, mask_list, opt, nums=None):
     for i in range(len(models)):
         os.makedirs(os.path.join(opt.outdir, str(i)), exist_ok=True)
 
-    # dataset = Random_Mask_Dataset(opt.image_path, opt.mask_path, len=nums, transpose=True)
-    dataset = CVC_Clinic_Reconstruction(opt.image_path, opt.mask_path, transpose=True)
+    dataset = Random_Mask_Dataset(opt.image_path, opt.mask_path, len=nums, transpose=True)
+    # dataset = CVC_Clinic_Reconstruction(opt.image_path, opt.mask_path, transpose=True)
     dataloader = DataLoader(dataset, batch_size=opt.batch_size, shuffle=False, num_workers=4, drop_last=False)
     for batch in tqdm(dataloader):
         # future_to_index = {executor.submit(load_single_batch, item + i, image_list, mask_list, random_image, opt): i
@@ -122,15 +130,11 @@ def gen_samples(models, samplers, image_list, mask_list, opt, nums=None):
         # for key in batches[0].keys():
         #     batch[key] = torch.cat([b[key] for b in batches], dim=0) if isinstance(batches[0][key], torch.Tensor) \
         #         else [b[key] for b in batches]
+        batch = apply_func(batch, lambda x: x.cuda() if isinstance(x, torch.Tensor) else x)
 
-        input_image = batch['image'].cuda()  # (B, 3, H, W)
-        mask = batch['mask'].cuda()  # (B, 1, H, W)
-        masked_image = batch['masked_image'].cuda()  # (B, 3, H, W)
-
-        condition = models[0].cond_stage_model.encode(masked_image)
-        m_condition = torch.nn.functional.interpolate(mask, size=condition.shape[-2:])
-        c = torch.cat([condition, m_condition], dim=1)
-        shape = (c.shape[1] - 1,) + c.shape[2:]
+        input_image = batch['image']  # (B, 3, H, W)
+        mask = batch['mask']  # (B, 1, H, W)
+        masked_image = batch['masked_image']  # (B, 3, H, W)
 
         input_image  = torch.clamp((input_image + 1.) / 2., 0., 1.).cpu().numpy().transpose(0, 2, 3, 1) * 255.0
         input_image  = input_image.astype(np.uint8)
@@ -140,13 +144,15 @@ def gen_samples(models, samplers, image_list, mask_list, opt, nums=None):
         mask         = np.repeat(mask, 3, axis=3)
         mask         = mask.astype(np.uint8)
 
-        l = [input_image, masked_image]
+        l = [input_image, mask, masked_image]
         for i in range(len(models)):
             model = models[i]
+            condition = model.get_learned_conditioning(batch['condition'])
+            shape = (4, 32, 32)
             sampler = samplers[i]
             samples_ddim, _ = sampler.sample(S=opt.steps[i],
-                                                conditioning=c,
-                                                batch_size=c.shape[0],
+                                                conditioning=condition,
+                                                batch_size=condition.shape[0],
                                                 shape=shape,
                                                 verbose=False)
             x_sample_ddim = model.decode_first_stage(samples_ddim)
@@ -164,7 +170,7 @@ def gen_samples(models, samplers, image_list, mask_list, opt, nums=None):
             save_image_with_suffix(combined, os.path.join(opt.outdir, 'combined'), os.path.basename(batch['image_path'][i]))
             save_image_with_suffix(mask[i], os.path.join(opt.outdir, 'mask'), os.path.basename(batch['image_path'][i]))
             for j in range(len(models)):
-                save_image_with_suffix(l[j+2][i], os.path.join(opt.outdir, str(j)), os.path.basename(batch['image_path'][i]))
+                save_image_with_suffix(l[len(l)-len(models)+j][i], os.path.join(opt.outdir, str(j)), os.path.basename(batch['image_path'][i]))
 
 @torch.no_grad()
 def dice_compare(models, image_list, mask_list, opt):

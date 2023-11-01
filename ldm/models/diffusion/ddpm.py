@@ -722,8 +722,7 @@ class LatentDiffusion(DDPM):
         if return_original_cond:
             out.append(xc)
         if bs is not None:
-            # out = [o[:bs] for o in out]
-            out = apply_func(out, lambda x: x[:bs])
+            out = apply_func(out, lambda x: x[:bs] if hasattr(x, '__getitem__') else x)
         return out
 
     @torch.no_grad()

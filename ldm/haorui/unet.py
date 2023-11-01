@@ -96,7 +96,7 @@ class Unet(pl.LightningModule):
             'optimizer': optimizer,
             'lr_scheduler': {
                 'scheduler': scheduler,
-                'interval': 'epoch',
+                'interval': 'step',
                 'frequency': 1,
             }
         }
@@ -134,9 +134,9 @@ class Unet(pl.LightningModule):
         dice_loss = self.dice_loss(outputs, masks)
         bce_loss = self.bce_loss(outputs, masks)
         loss = dice_loss + bce_loss
-        self.log('dice_loss', dice_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
-        self.log('bce_loss', bce_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
-        self.log('val_loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+        self.log('dice_loss', dice_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
+        self.log('bce_loss', bce_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
+        self.log('val_loss', loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         return loss
 
     @torch.no_grad()
@@ -221,7 +221,7 @@ class Unet_ldm(pl.LightningModule):
                 'optimizer': optimizer,
                 'lr_scheduler': {
                     'scheduler': scheduler,
-                    'interval': 'epoch',
+                    'interval': 'step',
                     'frequency': 1,
                 }
             }
@@ -237,14 +237,12 @@ class Unet_ldm(pl.LightningModule):
         images = batch['image']
         masks = batch['mask']
         masked_images = batch['masked_image']
-        condition = self.ldm.cond_stage_model.encode(masked_images)
-        m_condition = torch.nn.functional.interpolate(masks, size=condition.shape[-2:])
-        c = torch.cat([condition, m_condition], dim=1)
-        shape = (c.shape[1] - 1,) + c.shape[2:]
+        condition = self.ldm.get_learned_conditioning(batch['condition'])
+        shape = (4, 32, 32)
         with NO_OUTPUT():
             samples_ddim, _ = self.sampler.sample(S=self.sampler_steps,
-                                                conditioning=c,
-                                                batch_size=c.shape[0],
+                                                conditioning=condition,
+                                                batch_size=condition.shape[0],
                                                 shape=shape,
                                                 verbose=False)
         synthetic_images = self.ldm.decode_first_stage(samples_ddim)
@@ -279,12 +277,12 @@ class Unet_ldm(pl.LightningModule):
         loss = 0
         if self.dice:
             dice_loss = self.dice_loss(outputs, masks)
-            self.log('val_dice_loss', dice_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+            self.log('val_dice_loss', dice_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         if self.bce:
             bce_loss = self.bce_loss(outputs, masks)
-            self.log('val_bce_loss', bce_loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+            self.log('val_bce_loss', bce_loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         loss = dice_loss + bce_loss
-        self.log('val_loss', loss, prog_bar=True, logger=True, on_step=False, on_epoch=True)
+        self.log('val_loss', loss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
         return loss
 
     @torch.no_grad()

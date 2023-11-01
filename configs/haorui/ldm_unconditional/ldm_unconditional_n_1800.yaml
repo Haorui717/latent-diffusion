@@ -1,5 +1,5 @@
 model:
-  base_learning_rate: 5.0e-07
+  base_learning_rate: 1.0e-06
   target: ldm.models.diffusion.ddpm.LatentDiffusion
   params:
     linear_start: 0.0015
@@ -9,19 +9,19 @@ model:
     timesteps: 1000
     loss_type: l1
     first_stage_key: image
-    cond_stage_key: condition
+    # cond_stage_key: condition
     image_size: 32
     channels: 4
-    concat_mode: true
-    cond_stage_trainable: false
-    conditioning_key: concat 
+    # concat_mode: true
+    # cond_stage_trainable: false
+    # conditioning_key: concat 
     monitor: val/loss_simple_ema
     # ckpt_path: /home/zongwei/haorui/ccvl15/haorui/latent-diffusion-PC-ccvl23/logs/2023-07-02T02-19-35_ldm_polyp/checkpoints/epoch=000262.ckpt
     scheduler_config:  
       target: ldm.lr_scheduler.LambdaWarmUpCosineScheduler2
       params:
-        warm_up_steps: [200]
-        cycle_lengths: [50000]
+        warm_up_steps: [500]
+        cycle_lengths: [123000]  # 1000 epochs
         f_start: [1.e-6]
         f_max: [1.]
         f_min: [0.01]
@@ -30,7 +30,7 @@ model:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
       params:
         image_size: 32
-        in_channels: 5  # 4 + 1 (mask)
+        in_channels: 4
         out_channels: 4
         model_channels: 128
         attention_resolutions:
@@ -76,30 +76,34 @@ model:
           dropout: 0.0
         lossconfig:
           target: torch.nn.Identity
-    cond_stage_config:
-      target: ldm.haorui.cond_stage.OnlyMaskCondStage
-      params:
-        image_size: 32
+    cond_stage_config:  __is_unconditional__
+      # target: ldm.haorui.cond_stage.OnlyMaskCondStage
+      # params:
+      #   image_size: 32
 
-          
+
 
 data:
   target: main.DataModuleFromConfig
   params:
-    batch_size: 16
+    batch_size: 8
     wrap: True
     train:
       target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
         size: 256
-        image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_images_train.txt
-        mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_masks_train.txt
+        image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolyGEN_n+p_nonempty_images_train.txt
+        mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolyGEN_n+p_nonempty_images_train.txt
+        # image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_images_debug.txt
+        # mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_masks_debug.txt
     validation:
       target: data.haorui.CVC_Clinic.CVC_Clinic_Reconstruction
       params:
         size: 256
-        image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_images_val.txt
-        mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_masks_val.txt
+        image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_images_test.txt
+        mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_masks_test.txt
+        # image_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_images_debug.txt
+        # mask_path: /home/yixiao/haorui/ccvl15/haorui/datasets/combined_dataset/reduce_data_dataset/PolypGEN/PolypGEN_p_nonempty_masks_debug.txt
 
 
 lightning:
